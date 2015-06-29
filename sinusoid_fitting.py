@@ -22,6 +22,33 @@ def fit_signal(time, signal, pad=0):
     r"""
     Fit signal to a cosine function using initial guesses from fourier analysis
     and min/max finding.
+
+    Parameters
+    ----------
+    time : ndarray of floats
+        sample times
+    signal : ndarray of floats
+        samples
+    pad : int, optional
+        number of samples to pad to interpolate between fourier bins
+ 
+    Returns
+    -------
+    fit_parameters : dict
+        dictionary of cosine fit parameters: amplitude, phase_shift, offset, frequency 
+    fit_stds : dict
+        dictionary of uncertainty in fit parameters.
+    covariance : ndarray of float (MxM)
+        covariance matrix of fit
+
+    Example
+    -------
+    >>> time = np.linspace(0., 1./(50e3)*10., 2000) 
+    >>> signal = 1.*np.cos(50e3*time*2.*np.pi + 0.5) + 1.
+    >>> (fit_parameters, fit_stds, 
+         covariance) = fit_signal(time, signal)
+    >>> print fit_parameters
+        {}
     """
     amplitude_guess = estimate_amplitude(signal)
     offset_guess = estimate_offset(signal, amplitude_guess)
