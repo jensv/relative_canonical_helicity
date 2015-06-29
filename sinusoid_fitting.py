@@ -89,7 +89,7 @@ def estimate_offset(signal, amplitude):
     Estiamte offset by taking the difference of the amplitude, max and min.
     """
     offset_from_max = signal.max() - amplitude
-    offset_from_min = signal.min() - amplitude
+    offset_from_min = signal.min() + amplitude
     return np.mean([offset_from_max, offset_from_min])
 
 
