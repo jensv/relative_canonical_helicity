@@ -55,7 +55,7 @@ def determine_transform_params(fourier, freqs):
     power, amplitude, phase and DC offset.
     """
     n_over_two = freqs.size / 2
-    max_index = np.abs(fourier[n_over_two+1:].argmax())
+    max_index = np.abs(fourier[n_over_two+1:]).argmax()
     frequency = freqs[n_over_two+1:][max_index]
     power = np.abs(fourier[n_over_two+1:][max_index])
     amplitude = power / n_over_two
