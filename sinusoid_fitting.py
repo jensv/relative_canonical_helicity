@@ -18,14 +18,14 @@ sns.set_style('whitegrid')
 sns.set_context('poster')
 
 
-def fit_signal(time, signal):
+def fit_signal(time, signal, pad=0):
     r"""
     Fit signal to a cosine function using initial guesses from fourier analysis
     and min/max finding.
     """
     amplitude_guess = estimate_amplitude(signal)
     offset_guess = estimate_offset(signal, amplitude_guess)
-    frequency_guess = estimate_frequency(signal, time)
+    frequency_guess = estimate_frequency(signal, time, pad=pad)
     phase_guess = estimate_phase(signal, time, frequency_guess)
     (fit_parameters, fit_stds,
      covariance) = cosine_fit(time, signal,
@@ -41,7 +41,7 @@ def fourier_transform(signal, time, pad=0):
     Return shifted fourier tansform and frequencies.
     Optionally pad the input signal with zeros.
     """
-    padded_signal = np.pad(signal, pad, mode='constant')
+    padded_signal = np.pad(signal, pad, mode='reflect')
     fourier = fftpack.fft(padded_signal)
     freqs = fftpack.fftfreq(padded_signal.size, d=time[1] - time[0])
     fourier_shifted = fftpack.fftshift(fourier)
