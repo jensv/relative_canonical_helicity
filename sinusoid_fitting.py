@@ -91,11 +91,11 @@ def determine_transform_params(fourier, freqs):
     return frequency, power, amplitude, phase, DC_offset
 
 
-def estimate_frequency(signal, time):
+def estimate_frequency(signal, time, pad=0):
     r"""
     Estimate frequency from maximum of Fourier transform.
     """
-    transform, freqs = fourier_transform(signal, time)
+    transform, freqs = fourier_transform(signal, time, pad=pad)
     frequency_estimate = determine_transform_params(transform, freqs)[0]
     return frequency_estimate
 
