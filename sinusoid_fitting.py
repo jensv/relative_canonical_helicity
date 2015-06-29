@@ -101,7 +101,7 @@ def estimate_phase(signal, time, frequency):
     zero_phase_index = signal.argmax()
     delta_time = time[zero_phase_index] - time[0]
     period = 1./frequency
-    period_fraction = delta_time % period
+    period_fraction = 1. - (delta_time % period / period)
     return period_fraction*2.*np.pi
 
 
