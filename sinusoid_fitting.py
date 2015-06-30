@@ -6,6 +6,7 @@ Created on Wed Jun 10 22:30:08 2015
 """
 
 import numpy as np
+from numpy.testing import assert_almost_equal
 import scipy.fftpack as fftpack
 from scipy.optimize import curve_fit
 
@@ -61,6 +62,30 @@ def fit_signal(time, signal, pad=0):
                               offset_guess=offset_guess,
                               phase_guess=phase_guess)
     return fit_parameters, fit_stds, covariance
+
+
+def test_fit_signal():
+    r"""
+    Tests fit_signal for a perfect cosine. 
+
+    This test can be run with "nosetests sinusoidal_fitting" in bash.
+    """
+    frequency = 50e3
+    phase = 0.5
+    amplitude = 1.
+    offset = 1.  
+    time = np.linspace(0., 1./50e3*10., 2000.)
+    signal = 1.*np.cos(50e3*time*2.*np.pi + 0.5) + 1.
+    (fit_parameters, fit_stds,
+     covariance) = fit_signal(time, signal)
+    assert_almost_equal(frequency, fit_parameters['frequency'], 
+                        err_msg="Frequency of perfect cosine not fit correctly.")
+    assert_almost_equal(phase, fit_parameters['phase'],
+                        err_msg="Phase of perfect cosine not fit correctly.")
+    assert_almost_equal(amplitude, fit_parameters['amplitude'],
+                        err_msg="Amplitude of perfect cosine not fit correctly.")
+    assert_almost_equal(offset, fit_parameters['offset'],
+                        err_msg="Offset of perfect cosine not fit correctly.")
 
 
 def fourier_transform(signal, time, pad=0):
