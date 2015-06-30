@@ -48,7 +48,7 @@ def fit_signal(time, signal, pad=0):
     >>> (fit_parameters, fit_stds, 
          covariance) = fit_signal(time, signal)
     >>> print fit_parameters
-        {}
+        {'phase': 0.49999999999999978, 'frequency': 50000.0, 'amplitude': 0.999999999999989, 'offset':1}
     """
     amplitude_guess = estimate_amplitude(signal)
     offset_guess = estimate_offset(signal, amplitude_guess)
