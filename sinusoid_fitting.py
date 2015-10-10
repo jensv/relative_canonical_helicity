@@ -32,11 +32,11 @@ def fit_signal(time, signal, pad=0):
         samples
     pad : int, optional
         number of samples to pad to interpolate between fourier bins
- 
+
     Returns
     -------
     fit_parameters : dict
-        dictionary of cosine fit parameters: amplitude, phase_shift, offset, frequency 
+        dictionary of cosine fit parameters: amplitude, phase_shift, offset, frequency
     fit_stds : dict
         dictionary of uncertainty in fit parameters.
     covariance : ndarray of float (MxM)
@@ -44,9 +44,9 @@ def fit_signal(time, signal, pad=0):
 
     Example
     -------
-    >>> time = np.linspace(0., 1./(50e3)*10., 2000) 
+    >>> time = np.linspace(0., 1./(50e3)*10., 2000)
     >>> signal = 1.*np.cos(50e3*time*2.*np.pi + 0.5) + 1.
-    >>> (fit_parameters, fit_stds, 
+    >>> (fit_parameters, fit_stds,
          covariance) = fit_signal(time, signal)
     >>> print fit_parameters
         {'phase': 0.49999999999999978, 'frequency': 50000.0, 'amplitude': 0.999999999999989, 'offset':1}
@@ -66,19 +66,19 @@ def fit_signal(time, signal, pad=0):
 
 def test_fit_signal():
     r"""
-    Tests fit_signal for a perfect cosine. 
+    Tests fit_signal for a perfect cosine.
 
     This test can be run with "nosetests sinusoidal_fitting" in bash.
     """
     frequency = 50e3
     phase = 0.5
     amplitude = 1.
-    offset = 1.  
+    offset = 1.
     time = np.linspace(0., 1./50e3*10., 2000.)
     signal = 1.*np.cos(50e3*time*2.*np.pi + 0.5) + 1.
     (fit_parameters, fit_stds,
      covariance) = fit_signal(time, signal)
-    assert_almost_equal(frequency, fit_parameters['frequency'], 
+    assert_almost_equal(frequency, fit_parameters['frequency'],
                         err_msg="Frequency of perfect cosine not fit correctly.")
     assert_almost_equal(phase, fit_parameters['phase'],
                         err_msg="Phase of perfect cosine not fit correctly.")
@@ -157,7 +157,7 @@ def estimate_phase(signal, time, frequency):
     return period_fraction*2.*np.pi
 
 
-def cosine_to_fit(t, amplitude, frequency, offset, phase):
+def cosine(t, amplitude, frequency, offset, phase):
     r"""
     Cosine function with fit parameters.
     """
@@ -170,7 +170,7 @@ def cosine_fit(time, signal, amplitude_guess=1., frequency_guess=1.,
     Least-squares fit cosine function to the signal.
     """
     guess = [amplitude_guess, frequency_guess, offset_guess, phase_guess]
-    optimum, covariance = curve_fit(cosine_to_fit, time, signal, guess)
+    optimum, covariance = curve_fit(cosine, time, signal, guess)
     fit_params = {'amplitude': optimum[0], 'frequency': optimum[1],
                   'offset': optimum[2], 'phase': optimum[3]}
     stds = np.sqrt(np.diag(covariance))
