@@ -6,26 +6,27 @@ Created on Tue Dec  1 13:48:25 2015
 """
 
 import numpy as np
-from pysvisfile.vtk import (UnstructuredGrid,
-                            DataArray,
-                            AppendedDataXMLGenerator,
-                            VTK_VERTEX, VF_LIST_OF_VECTORS,
-                            VF_LIST_OF_COMPONENTS)
+from pyvisfile.vtk import (write_structured_grid,
+                           UnstructuredGrid,
+                           DataArray,
+                           AppendedDataXMLGenerator,
+                           VTK_VERTEX, VF_LIST_OF_VECTORS,
+                           VF_LIST_OF_COMPONENTS)
+from pytools.obj_array import make_obj_array
 from os.path import exists
 import scipy.io.idl as idl
 from scipy.interpolate import griddata
 
 
-def plane_points_3d(z_position, data):
+def plane_points_3d(data, z_position):
     r"""
     Returns 3d points from dictionary of a 2D scan of RSX.
     """
-    assert type(data) == dict, 'Data is not a dictionary.'
     assert ('x_out' in data.keys() and
             'y_out' in data.keys()), 'No x_out and y_out keys in data '
-    points_3d = np.dstack(data['x_out'],
-                          data['y_out'],
-                          np.ones(data['x_out'].size)*z_position)
+    points_3d = np.dstack((data['x_out'],
+                           data['y_out'],
+                           np.ones(data['x_out'].size)*z_position))[0]
     return points_3d
 
 
@@ -58,7 +59,8 @@ def write_data_to_unstructured_vtk(file_name, data, points):
                             cell_types=np.asarray([VTK_VERTEX] * n_points,
                                                   dtype=np.uint8))
     for name, field in data:
-        grid.add_pointdata(DataArray(name, field,
+        print field.astype('float64')
+        grid.add_pointdata(DataArray(name, field.astype('float64'),
                            vector_format=VF_LIST_OF_COMPONENTS))
     if exists(file_name):
         raise RuntimeError("output file '%s' already exists" % file_name)
@@ -107,7 +109,7 @@ def write_vector_data_to_vtk(file_name, time_point, z_position, labels,
                               (gridx, gridy))
     interpolated_field = np.dstack((interpolated_x,
                                     interpolated_y,
-                                    interpolated_z))
+                                    interpolated_z))[0]
     data = [(labels[0],
              interpolated_field)]
     write_data_to_unstructured_vtk(file_name, data, data_points)
