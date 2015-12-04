@@ -64,6 +64,8 @@ def determine_sample_bounds(data_dicts):
 
 def resample_scalar(scalar_dict,
                     time_point,
+                    x_min, x_max,
+                    y_min, y_max,
                     **kwargs):
     r"""
     Resample scalar from idl readout from measurement grid to same structured
@@ -71,11 +73,11 @@ def resample_scalar(scalar_dict,
     """
     x_min, x_max, y_min, y_max = determine_sample_bounds([scalar_dict])
     (quanitity_interpolated,
-     x_grid, y_grid) = resample_sample_bounds(scalar_dict,
-                                              time_point,
-                                              x_min, x_max,
-                                              y_min, y_max,
-                                              **kwargs)
+     x_grid, y_grid) = resample_on_structutred_grid(scalar_dict,
+                                                    time_point,
+                                                    x_min, x_max,
+                                                    y_min, y_max,
+                                                    **kwargs)
     return quanitity_interpolated, x_grid, y_grid
 
 
@@ -83,6 +85,8 @@ def resample_vector(vector_x_dict,
                     vector_y_dict,
                     vector_z_dict,
                     time_point,
+                    x_min, x_max,
+                    y_min, y_max,
                     **kwargs):
     r"""
     Resample vector from idl readout from measurement grid to same structured
@@ -93,11 +97,11 @@ def resample_vector(vector_x_dict,
     vector_interpolated = []
     for data_dict in data_dicts:
         (quanitity_interpolated,
-         x_grid, y_grid) = resample_sample_bounds(data_dict,
-                                                  time_point,
-                                                  x_min, x_max,
-                                                  y_min, y_max,
-                                                  **kwargs)
+         x_grid, y_grid) = resample_on_structutred_grid(data_dict,
+                                                        time_point,
+                                                        x_min, x_max,
+                                                        y_min, y_max,
+                                                        **kwargs)
         vector_interpolated.append(quanitity_interpolated)
     return vector_interpolated, x_grid, y_grid
 
@@ -115,7 +119,7 @@ def prepare_mesh(x_grid, y_grid, z_position):
     return mesh
 
 
-def reshape_vector_for_vtk_writer(vector_x, vector_y, vector_z):
+def reshape_vector(vector_x, vector_y, vector_z):
     r"""
     Reshape vector on 2d mesh for 3d vtk writer.
     """
@@ -131,7 +135,7 @@ def reshape_vector_for_vtk_writer(vector_x, vector_y, vector_z):
     return vector
 
 
-def reshape_scalar_for_vtk_writer(scalar):
+def reshape_scalar(scalar):
     r"""
     Reshape scalar on 2d mesh for 3d vtk writer.
     """
