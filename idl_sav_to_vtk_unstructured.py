@@ -59,7 +59,7 @@ def write_data_to_unstructured_vtk(file_name, data, points):
                             cell_types=np.asarray([VTK_VERTEX] * n_points,
                                                   dtype=np.uint8))
     for name, field in data:
-        print field.astype('float64')
+        print 'number of nans', np.sum(np.isnan(field))
         grid.add_pointdata(DataArray(name, field.astype('float64'),
                            vector_format=VF_LIST_OF_COMPONENTS))
     if exists(file_name):

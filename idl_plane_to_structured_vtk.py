@@ -12,6 +12,7 @@ from os.path import exists
 import scipy.io.idl as idl
 from scipy.interpolate import griddata
 
+
 def read_data(file_name):
     r"""
     Read IDL sav file.
@@ -24,27 +25,31 @@ def resample_on_structutred_grid(data_dict,
                                  time_point,
                                  x_min, x_max,
                                  y_min, y_max,
-                                 x_points=50,
-                                 y_points=50,
-                                 to_clip=[0, -1, 0, -1],
-                                 method='linear'):
+                                 x_points=25,
+                                 y_points=25,
+                                 method='cubic'):
     r"""
     Resample quantity from measurement grid to structured grid.
     """
-    x_points = np.linspace(x_min, x_max, 100)
-    y_points = np.linspace(y_min, y_max, 100)
+    x_points = np.linspace(x_min, x_max, x_points)
+    y_points = np.linspace(y_min, y_max, y_points)
     x_grid, y_grid = np.meshgrid(x_points, y_points)
     quantity_interpolated = griddata(np.dstack((data_dict['x_out'],
                                                 data_dict['y_out']))[0],
                                                 data_dict['a_out'][time_point],
                                                 (x_grid, y_grid),
                                                 method=method)
-    x_slice = slice(to_clip[0], to_clip[1])
-    y_slice = slice(to_clip[2], to_clip[3])
     quantity_interpolated = quantity_interpolated[x_slice, y_slice]
     x_grid = x_grid[x_slice, y_slice]
     y_grid = y_grid[x_slice, y_slice]
     return quantity_interpolated, x_grid, y_grid
+
+
+def remove_nans(quantity_interpolated, x_grid, y_grid):
+    nan_positions = np.isnan(quantity_interpolated)
+    min_column, max_column = 0, x_grid.shape[0]
+    min_row, max_row = 0, x_grid.shape[1]
+    for nan_position in nan_positions:
 
 
 def determine_sample_bounds(data_dicts):
@@ -152,3 +157,25 @@ def write_to_structured_grid(file_name, data, label, mesh):
     write_structured_grid(file_name,
                           mesh,
                           point_data=[(label, data)])
+
+
+def main():
+    r"""
+    Called from command line. Create a vector or scalar vtk file from idl sav
+    files.
+    """
+
+
+def handle_args():
+    r"""
+    """
+    data_type = sys.argv[1]
+    if data_type == 'vector':
+        msg = 'vector type requires 5 arguments: 3 input files, time_points, output_file'
+        assert len(sys.argv) == 6, msg
+    if data_type == 'scalar':
+        msg = 'vector type requires 3 arguments: input file, time_points, output_file'
+        assert len(sys.argv) == 3, msg
+
+if __name__ == '__main__':
+    main()
