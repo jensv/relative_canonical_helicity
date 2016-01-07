@@ -46,10 +46,16 @@ def resample_on_structutred_grid(data_dict,
 
 
 def remove_nans(quantity_interpolated, x_grid, y_grid):
+    r"""
+    """
     nan_positions = np.isnan(quantity_interpolated)
-    min_column, max_column = 0, x_grid.shape[0]
-    min_row, max_row = 0, x_grid.shape[1]
-    for nan_position in nan_positions:
+    if nan_positions.size == 0:
+        return quantity_interpolated, x_grid, y_grid
+    quantity_wo_nans = np.array(quantity_interpolated)
+
+    while not np.isnan(quantity_interpolated).size == 0:
+        np.isnan(quantity_interpolated)
+
 
 
 def determine_sample_bounds(data_dicts):
