@@ -164,18 +164,64 @@ def main():
     Called from command line. Create a vector or scalar vtk file from idl sav
     files.
     """
+    input_dict = handle_args()
+    if input_dict['data_type'] == 'vector':
+        measurements_x = read_data(input_dict['x_input_path'])
+        measurements_y = read_file(input_dict['y_input_path'])
+        measurements_z = read_file(input_dict['z_input_path'])
+        vector_dicts = [measurements_x, measurements_y, measurements_z]
+        (x_min, x_max, y_min, y_max) = determine_sample_bounds(vector_dicts)
+        for time_point in input_dict['time_points']:
+            quantity_resampled, x_grid, y_grid = resample_vector(vector_dicts[0],
+                                                                 vector_dicts[1],
+                                                                 vector_dicts[2],
+                                                                 time_point,
+                                                                 x_min, x_max, y_min, y_max,
+                                                                 to_clip=input_dict['to_clip'])
+            mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
+            vector = reshape_vector(quantity_resampled)
+            output_path = input_dict['output_path'] + str(timepoint).zfill(6)
+            write_to_structured_grid(output_path, vector,
+                                     input_dict['symbol'], mesh)
+    if input_dict['data_type'] == 'scalar':
+        measurements = read_data['input_path']
+        (x_min, x_max, y_min, y_max) = determine_sample_bounds(measurements)
+        for time_point in input_dict['time_points']:
+            quantity_resampled, x_grid, y_grid = resample_scalar(measurements,
+                                                                 time_point,
+                                                                 x_min, x_max, y_min, y_max
+                                                                 to_clip=input_dict['to_clip'])
+            mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
+            scalar = reshape_scalar(quantity_resampled)
+            output_path = input_dict['output_path'] + str(timepoint).zfill(6)
+            write_to_structured_grid(output_path, scalar, input_dict['symbol'],
+                                     output_path)
 
 
 def handle_args():
     r"""
+    Put command line args in dictionary.
     """
     data_type = sys.argv[1]
+    input_dict = {}
     if data_type == 'vector':
-        msg = 'vector type requires 5 arguments: 3 input files, time_points, output_file'
-        assert len(sys.argv) == 6, msg
+        msg = 'vector type requires 6 arguments: 3 input files, z_position, time_points, output_file, symbol, to_clip'
+        assert len(sys.argv) == 10, msg
+        for i, key in enumerate(('data_type', 'x_input_path', 'y_input_path',
+                                 'z_input_path', 'z_position'. 'time_points',
+                                 'output_path', 'symbol', 'to_clip')):
+            input_dict[key] = sys.argv[1:][i]
     if data_type == 'scalar':
-        msg = 'vector type requires 3 arguments: input file, time_points, output_file'
-        assert len(sys.argv) == 3, msg
+        assert len(sys.argv) == 8, msg
+        msg = 'scalar type requires 4 arguments: input file, z_position, time_points, output_file, symbol, to_clip'
+        for i, key in enumerate(('data_type', 'z_position', 'input_path',
+                                 'time_points', 'output_path', 'symbol',
+                                 'to_clip')):
+            input_dict[key] = sys.argv[1:][i]
+    input_dict['time_points'] = np.arange(input_dict['time_points'])
+    input_dict['to_clip'] = [0, input_dcit['to_clip'], 0, input_dict['to_clip']]
+    return input_dict
+
 
 if __name__ == '__main__':
     main()
