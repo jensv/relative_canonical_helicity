@@ -11,6 +11,7 @@ from pytools.obj_array import make_obj_array
 from os.path import exists
 import scipy.io.idl as idl
 from scipy.interpolate import griddata
+import sys
 
 
 def read_data(file_name):
@@ -36,26 +37,68 @@ def resample_on_structutred_grid(data_dict,
     x_grid, y_grid = np.meshgrid(x_points, y_points)
     quantity_interpolated = griddata(np.dstack((data_dict['x_out'],
                                                 data_dict['y_out']))[0],
-                                                data_dict['a_out'][time_point],
-                                                (x_grid, y_grid),
-                                                method=method)
+                                               data_dict['a_out'][time_point],
+                                               (x_grid, y_grid),
+                                               method=method)
     quantity_interpolated = quantity_interpolated[x_slice, y_slice]
     x_grid = x_grid[x_slice, y_slice]
     y_grid = y_grid[x_slice, y_slice]
     return quantity_interpolated, x_grid, y_grid
 
 
-def remove_nans(quantity_interpolated, x_grid, y_grid):
+def remove_nans(quantity, x_grid, y_grid):
     r"""
     """
-    nan_positions = np.isnan(quantity_interpolated)
-    if nan_positions.size == 0:
-        return quantity_interpolated, x_grid, y_grid
-    quantity_wo_nans = np.array(quantity_interpolated)
+    nan_positions = np.isnan(quantity)
+    if np.sum(nan_positions) == 0:
+        return quantity, x_grid, y_grid
 
-    while not np.isnan(quantity_interpolated).size == 0:
-        np.isnan(quantity_interpolated)
+    while not np.sum(np.isnan(quantity)) == 0:
+        shape = quantity.shape
+        nan_to_remove = np.isnan(quantity)[0]
+        rows_to_remove = np.max([nan_to_remove[0] + 1, shape[0] - nan_to_remove[0]])
+        colums_to_remove = np.max([nan_to_remove[1] + 1, shape[1] - nan_to_remove[1]])
+        axis = 0 if rows_to_remove >= columns_to_remove else 1
+        if nan_to_remove[axis] + 1 >= shape[axis] - nan_to_remove[axis]:
+            indexes = np.s_[nan_to_remove[axis] + 1:]
+        else:
+            indexes = np.s_[:-(shape[axis] - nan_to_remove[axis])]
+        np.delete(quantity, indexes, axis=axis)
+        np.delete(x_grid, indexes, axis=axis)
+        np.delete(y_grid, indexes, axis=axis)
+    return quantity, x_grid, y_grid
 
+
+def remove_nans_vector(vector, x_grid, y_grid):
+    r"""
+    """
+    nan_positions = np.isnan(vector)
+    if np.sum(nan_positions) == 0:
+        return vector, x_grid, y_grid
+    directions = set([0, 1, 2])
+    for direction in range(3):
+        other_direc = list(directions.difference([direction]))
+        quantity = vector[direction]
+        other_quantities = [vector[other_direc[0]], vector[other_direc[1]]]
+        while not np.sum(np.isnan(quantity)) == 0:
+            shape = quantity.shape
+            nan_to_remove = np.isnan(quantity)[0]
+            rows_to_remove = np.max([nan_to_remove[0] + 1, shape[0] - nan_to_remove[0]])
+            colums_to_remove = np.max([nan_to_remove[1] + 1, shape[1] - nan_to_remove[1]])
+            axis = 0 if rows_to_remove >= columns_to_remove else 1
+            if nan_to_remove[axis] + 1 >= shape[axis] - nan_to_remove[axis]:
+                indexes = np.s_[nan_to_remove[axis] + 1:]
+            else:
+                indexes = np.s_[:-(shape[axis] - nan_to_remove[axis])]
+            np.delete(quantity, indexes, axis=axis)
+            np.delete(other_quantities[0], indexes, axis=axis)
+            np.delete(other_quantities[1], indexes, axis=axis)
+            np.delete(x_grid, indexes, axis=axis)
+            np.delete(y_grid, indexes, axis=axis)
+        vector[direction] = quantity
+        vector[other_direc[0]] = other_quantities[0]
+        vector[other_direc[1]] = other_quantities[1]
+    return vector, x_grid, y_grid
 
 
 def determine_sample_bounds(data_dicts):
@@ -173,8 +216,8 @@ def main():
     input_dict = handle_args()
     if input_dict['data_type'] == 'vector':
         measurements_x = read_data(input_dict['x_input_path'])
-        measurements_y = read_file(input_dict['y_input_path'])
-        measurements_z = read_file(input_dict['z_input_path'])
+        measurements_y = read_data(input_dict['y_input_path'])
+        measurements_z = read_data(input_dict['z_input_path'])
         vector_dicts = [measurements_x, measurements_y, measurements_z]
         (x_min, x_max, y_min, y_max) = determine_sample_bounds(vector_dicts)
         for time_point in input_dict['time_points']:
@@ -186,7 +229,7 @@ def main():
                                                                  to_clip=input_dict['to_clip'])
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
             vector = reshape_vector(quantity_resampled)
-            output_path = input_dict['output_path'] + str(timepoint).zfill(6)
+            output_path = input_dict['output_path'] + str(time_point).zfill(6)
             write_to_structured_grid(output_path, vector,
                                      input_dict['symbol'], mesh)
     if input_dict['data_type'] == 'scalar':
@@ -195,7 +238,7 @@ def main():
         for time_point in input_dict['time_points']:
             quantity_resampled, x_grid, y_grid = resample_scalar(measurements,
                                                                  time_point,
-                                                                 x_min, x_max, y_min, y_max
+                                                                 x_min, x_max, y_min, y_max,
                                                                  to_clip=input_dict['to_clip'])
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
             scalar = reshape_scalar(quantity_resampled)
@@ -214,7 +257,7 @@ def handle_args():
         msg = 'vector type requires 6 arguments: 3 input files, z_position, time_points, output_file, symbol, to_clip'
         assert len(sys.argv) == 10, msg
         for i, key in enumerate(('data_type', 'x_input_path', 'y_input_path',
-                                 'z_input_path', 'z_position'. 'time_points',
+                                 'z_input_path', 'z_position', 'time_points',
                                  'output_path', 'symbol', 'to_clip')):
             input_dict[key] = sys.argv[1:][i]
     if data_type == 'scalar':
