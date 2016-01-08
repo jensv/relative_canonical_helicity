@@ -26,8 +26,8 @@ def resample_on_structutred_grid(data_dict,
                                  time_point,
                                  x_min, x_max,
                                  y_min, y_max,
-                                 x_points=25,
-                                 y_points=25,
+                                 x_points=100,
+                                 y_points=100,
                                  method='cubic'):
     r"""
     Resample quantity from measurement grid to structured grid.
@@ -40,40 +40,48 @@ def resample_on_structutred_grid(data_dict,
                                                data_dict['a_out'][time_point],
                                                (x_grid, y_grid),
                                                method=method)
-    quantity_interpolated = quantity_interpolated[x_slice, y_slice]
-    x_grid = x_grid[x_slice, y_slice]
-    y_grid = y_grid[x_slice, y_slice]
+    #quantity_interpolated = quantity_interpolated[x_slice, y_slice]
+    #x_grid = x_grid[x_slice, y_slice]
+    #y_grid = y_grid[x_slice, y_slice]
     return quantity_interpolated, x_grid, y_grid
 
 
 def remove_nans(quantity, x_grid, y_grid):
     r"""
     """
-    nan_positions = np.isnan(quantity)
-    if np.sum(nan_positions) == 0:
+    nans = np.isnan(quantity)
+    if np.sum(nans) == 0:
         return quantity, x_grid, y_grid
 
     while not np.sum(np.isnan(quantity)) == 0:
         shape = quantity.shape
-        nan_to_remove = np.isnan(quantity)[0]
-        rows_to_remove = np.max([nan_to_remove[0] + 1, shape[0] - nan_to_remove[0]])
-        colums_to_remove = np.max([nan_to_remove[1] + 1, shape[1] - nan_to_remove[1]])
-        axis = 0 if rows_to_remove >= columns_to_remove else 1
-        if nan_to_remove[axis] + 1 >= shape[axis] - nan_to_remove[axis]:
-            indexes = np.s_[nan_to_remove[axis] + 1:]
+        nan_to_remove = np.asarray(np.where(np.isnan(quantity)))[:, 0]
+        if nan_to_remove[0] <= shape[0]/2.:
+            rows_to_remove = nan_to_remove[0] + 1
         else:
-            indexes = np.s_[:-(shape[axis] - nan_to_remove[axis])]
-        np.delete(quantity, indexes, axis=axis)
-        np.delete(x_grid, indexes, axis=axis)
-        np.delete(y_grid, indexes, axis=axis)
+            rows_to_remove = shape[0] - nan_to_remove[0]
+        if nan_to_remove[1] <= shape[1]/2.:
+            columns_to_remove = nan_to_remove[1] + 1
+        else:
+            columns_to_remove = shape[1] - nan_to_remove[1]
+
+        axis = 0 if rows_to_remove >= columns_to_remove else 1
+
+        if nan_to_remove[axis] <= shape[axis]/2.:
+            indexes = np.s_[:nan_to_remove[axis] + 1]
+        else:
+            indexes = np.s_[-(shape[axis] - nan_to_remove[axis]):]
+        quantity = np.delete(quantity, indexes, axis=axis)
+        x_grid = np.delete(x_grid, indexes, axis=axis)
+        y_grid = np.delete(y_grid, indexes, axis=axis)
     return quantity, x_grid, y_grid
 
 
 def remove_nans_vector(vector, x_grid, y_grid):
     r"""
     """
-    nan_positions = np.isnan(vector)
-    if np.sum(nan_positions) == 0:
+    nans = np.isnan(vector)
+    if np.sum(nans) == 0:
         return vector, x_grid, y_grid
     directions = set([0, 1, 2])
     for direction in range(3):
@@ -82,19 +90,27 @@ def remove_nans_vector(vector, x_grid, y_grid):
         other_quantities = [vector[other_direc[0]], vector[other_direc[1]]]
         while not np.sum(np.isnan(quantity)) == 0:
             shape = quantity.shape
-            nan_to_remove = np.isnan(quantity)[0]
-            rows_to_remove = np.max([nan_to_remove[0] + 1, shape[0] - nan_to_remove[0]])
-            colums_to_remove = np.max([nan_to_remove[1] + 1, shape[1] - nan_to_remove[1]])
-            axis = 0 if rows_to_remove >= columns_to_remove else 1
-            if nan_to_remove[axis] + 1 >= shape[axis] - nan_to_remove[axis]:
-                indexes = np.s_[nan_to_remove[axis] + 1:]
+            nan_to_remove = np.asarray(np.where(np.isnan(quantity)))[:, 0]
+            if nan_to_remove[0] <= shape[0]/2.:
+                rows_to_remove = nan_to_remove[0] + 1
             else:
-                indexes = np.s_[:-(shape[axis] - nan_to_remove[axis])]
-            np.delete(quantity, indexes, axis=axis)
-            np.delete(other_quantities[0], indexes, axis=axis)
-            np.delete(other_quantities[1], indexes, axis=axis)
-            np.delete(x_grid, indexes, axis=axis)
-            np.delete(y_grid, indexes, axis=axis)
+                rows_to_remove = shape[0] - nan_to_remove[0]
+            if nan_to_remove[1] <= shape[1]/2.:
+                columns_to_remove = nan_to_remove[1] + 1
+            else:
+                columns_to_remove = shape[1] - nan_to_remove[1]
+
+            axis = 0 if rows_to_remove >= columns_to_remove else 1
+
+            if nan_to_remove[axis] <= shape[axis]/2.:
+                indexes = np.s_[:nan_to_remove[axis] + 1]
+            else:
+                indexes = np.s_[-(shape[axis] - nan_to_remove[axis]):]
+            quantity = np.delete(quantity, indexes, axis=axis)
+            other_quantities[0] = np.delete(other_quantities[0], indexes, axis=axis)
+            other_quantities[1] = np.delete(other_quantities[1], indexes, axis=axis)
+            x_grid = np.delete(x_grid, indexes, axis=axis)
+            y_grid = np.delete(y_grid, indexes, axis=axis)
         vector[direction] = quantity
         vector[other_direc[0]] = other_quantities[0]
         vector[other_direc[1]] = other_quantities[1]
@@ -184,7 +200,7 @@ def reshape_vector(vector_x, vector_y, vector_z):
     assert vector_x.shape[1] == vector_y.shape[1] == vector_z.shape[1], msg
     vector_x = np.expand_dims(np.expand_dims(vector_x, 2), 0)
     vector_y = np.expand_dims(np.expand_dims(vector_y, 2), 0)
-    vecotr_z = np.expand_dims(np.expand_dims(vector_z, 2), 0)
+    vector_z = np.expand_dims(np.expand_dims(vector_z, 2), 0)
     vector = make_obj_array([vector_x, vector_y, vector_z])
     return vector
 
@@ -268,7 +284,7 @@ def handle_args():
                                  'to_clip')):
             input_dict[key] = sys.argv[1:][i]
     input_dict['time_points'] = np.arange(input_dict['time_points'])
-    input_dict['to_clip'] = [0, input_dcit['to_clip'], 0, input_dict['to_clip']]
+    input_dict['to_clip'] = [0, input_dict['to_clip'], 0, input_dict['to_clip']]
     return input_dict
 
 
