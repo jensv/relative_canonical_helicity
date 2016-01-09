@@ -10,7 +10,7 @@ from pyvisfile.vtk import write_structured_grid
 from pytools.obj_array import make_obj_array
 from os.path import exists
 import scipy.io.idl as idl
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, SmoothBivariateSpline, LSQBivariateSpline
 import sys
 
 
@@ -28,7 +28,7 @@ def resample_on_structutred_grid(data_dict,
                                  y_min, y_max,
                                  x_points=100,
                                  y_points=100,
-                                 method='cubic'):
+                                 method='linear'):
     r"""
     Resample quantity from measurement grid to structured grid.
     """
@@ -44,6 +44,42 @@ def resample_on_structutred_grid(data_dict,
     #x_grid = x_grid[x_slice, y_slice]
     #y_grid = y_grid[x_slice, y_slice]
     return quantity_interpolated, x_grid, y_grid
+
+
+def fit_bivariate_splines(data_dict, time_point, weigth=None, kx=3, ky=3,
+                          s=None):
+    spline = SmoothBivariateSpline(data_dict['x_out'],
+                                   data_dict['y_out'],
+                                   data_dict['a_out'][time_point],
+                                   kx=kx, ky=ky, s=s)
+    return spline
+
+
+def evaluate_spline_on_structured_grid(spline, x_min, x_max, y_min, y_max,
+                                       xn_points, yn_points):
+    r"""
+    """
+    x_points = np.linspace(x_min, x_max, xn_points)
+    y_points = np.linspace(y_min, y_max, yn_points)
+    x_grid, y_grid = np.meshgrid(x_points, y_points)
+    values = spline(x_grid, y_grid, grid=False)
+    residual = spline.get_residual()
+    return values, residual, x_grid, y_grid
+
+
+def evaluate_spline_curl_on_structured_grid(spline_x, spline_y, x_min, x_max,
+                                            y_min, y_max,
+                                            xn_points, yn_points):
+    r"""
+    """
+    x_points = np.linspace(x_min, x_max, xn_points)
+    y_points = np.linspace(y_min, y_max, yn_points)
+    x_grid, y_grid = np.meshgrid(x_points, y_points)
+    curl = spline_y(x_grid, y_grid, dx=1, grid=False) - spline_x(x_grid,
+                                                                 y_grid,
+                                                                 dy=1,
+                                                                 grid=False)
+    return curl, x_grid, y_grid
 
 
 def remove_nans(quantity, x_grid, y_grid):
@@ -230,6 +266,11 @@ def main():
     files.
     """
     input_dict = handle_args()
+    kx = input_dict['kx']
+    ky = input_dict['ky']
+    smooth_factor = input_dict['smooth_factor']
+    x_points = input_dict['x_points']
+    y_points = input_dict['y_points']
     if input_dict['data_type'] == 'vector':
         measurements_x = read_data(input_dict['x_input_path'])
         measurements_y = read_data(input_dict['y_input_path'])
@@ -237,30 +278,65 @@ def main():
         vector_dicts = [measurements_x, measurements_y, measurements_z]
         (x_min, x_max, y_min, y_max) = determine_sample_bounds(vector_dicts)
         for time_point in input_dict['time_points']:
-            quantity_resampled, x_grid, y_grid = resample_vector(vector_dicts[0],
-                                                                 vector_dicts[1],
-                                                                 vector_dicts[2],
-                                                                 time_point,
-                                                                 x_min, x_max, y_min, y_max,
-                                                                 to_clip=input_dict['to_clip'])
+            spline_x = fit_bivariate_splines(vector_dicts[0], time_point,
+                                             weigth=None, kx=kx, ky=ky,
+                                             s=smooth_factor)
+            spline_y = fit_bivariate_splines(vector_dicts[1], time_point,
+                                             weigth=None, kx=kx, ky=ky,
+                                             s=smooth_factor)
+            spline_z = fit_bivariate_splines(vector_dicts[2], time_point,
+                                             weigth=None, kx=kx, ky=ky,
+                                             s=smooth_factor)
+            (vector_resampled_x,
+             residual_x,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline_x,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
+            (vector_resampled_y,
+             residual_y,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline_y,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
+            (vector_resampled_z,
+             residual_z,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline_z,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
-            vector = reshape_vector(quantity_resampled)
-            output_path = input_dict['output_path'] + str(time_point).zfill(6)
+            vector = reshape_vector(vector_resampled_x, vector_resampled_y,
+                                     vector_resampled_z)
+            output_path = input_dict['output_path'] + '_%06i.vts' % time_point
             write_to_structured_grid(output_path, vector,
                                      input_dict['symbol'], mesh)
     if input_dict['data_type'] == 'scalar':
-        measurements = read_data['input_path']
-        (x_min, x_max, y_min, y_max) = determine_sample_bounds(measurements)
+        measurements = read_data(input_dict['input_path'])
+        (x_min, x_max, y_min, y_max) = determine_sample_bounds([measurements])
         for time_point in input_dict['time_points']:
-            quantity_resampled, x_grid, y_grid = resample_scalar(measurements,
-                                                                 time_point,
-                                                                 x_min, x_max, y_min, y_max,
-                                                                 to_clip=input_dict['to_clip'])
+            spline = fit_bivariate_splines(measurements, time_point,
+                                           weigth=None, kx=kx, ky=ky,
+                                           s=smooth_factor)
+            (scalar_resampled,
+             residual,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
-            scalar = reshape_scalar(quantity_resampled)
-            output_path = input_dict['output_path'] + str(timepoint).zfill(6)
+            scalar = reshape_scalar(scalar_resampled)
+            output_path = input_dict['output_path'] + '_%06i.vts' % time_point
             write_to_structured_grid(output_path, scalar, input_dict['symbol'],
-                                     output_path)
+                                     mesh)
 
 
 def handle_args():
@@ -270,21 +346,30 @@ def handle_args():
     data_type = sys.argv[1]
     input_dict = {}
     if data_type == 'vector':
-        msg = 'vector type requires 6 arguments: 3 input files, z_position, time_points, output_file, symbol, to_clip'
-        assert len(sys.argv) == 10, msg
+        msg = 'vector type requires 12 arguments: 3 input files, z_position, time_points, output_file, symbol, kx, ky, smooth_factor, x_points, y_points'
+        assert len(sys.argv) == 14, msg
         for i, key in enumerate(('data_type', 'x_input_path', 'y_input_path',
                                  'z_input_path', 'z_position', 'time_points',
-                                 'output_path', 'symbol', 'to_clip')):
+                                 'output_path', 'symbol', 'kx', 'ky',
+                                 'smooth_factor', 'x_points', 'y_points')):
             input_dict[key] = sys.argv[1:][i]
     if data_type == 'scalar':
-        assert len(sys.argv) == 8, msg
-        msg = 'scalar type requires 4 arguments: input file, z_position, time_points, output_file, symbol, to_clip'
-        for i, key in enumerate(('data_type', 'z_position', 'input_path',
-                                 'time_points', 'output_path', 'symbol',
-                                 'to_clip')):
+        assert len(sys.argv) == 12, msg
+        msg = 'scalar type requires 10 arguments: input file, z_position, time_points, output_file, symbol, kx, ky, smooth_factor, x_points, y_points'
+        for i, key in enumerate(('data_type', 'input_path', 'z_position',
+                                 'time_points', 'output_path', 'symbol', 'kx',
+                                 'ky', 'smooth_factor', 'x_points', 'y_points')):
             input_dict[key] = sys.argv[1:][i]
-    input_dict['time_points'] = np.arange(input_dict['time_points'])
-    input_dict['to_clip'] = [0, input_dict['to_clip'], 0, input_dict['to_clip']]
+    input_dict['time_points'] = np.arange(int(input_dict['time_points']))
+    input_dict['kx'] = int(input_dict['kx'])
+    input_dict['ky'] = int(input_dict['ky'])
+    if 'None'.lower() == input_dict['smooth_factor'].lower():
+        input_dict['smooth_factor'] = None
+    else:
+        input_dict['smooth_factor'] = int(input_dict['smooth_factor'])
+    input_dict['x_points'] = int(input_dict['x_points'])
+    input_dict['y_points'] = int(input_dict['y_points'])
+    input_dict['z_position'] = float(input_dict['z_position'])
     return input_dict
 
 
