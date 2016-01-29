@@ -100,7 +100,7 @@ te_z357.sav:
 	mv 11*.sav te_z357.sav
 
 bx_z416.sav:
-	${idl_bin} -e "pro00710,'bdot10','x','b',indgen(21)*1./20.,1,shotset='001',current_rise=0"; \
+	${idl_bin} -e "pro00710,'bdot10','x','b',indgen(21)*1./20.,1,shotset='003',current_rise=0"; \
 	mv 11*.sav bx_z416.sav
 
 by_z416.sav:
