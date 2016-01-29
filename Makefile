@@ -112,7 +112,7 @@ bz_z416.sav:
 	mv 11*.sav bz_z416.sav
 
 n_z416.sav:
-	${idl_bin} -e "pro00710,'3p2','z','te',indgen(21)*1./20.,1,shotset='003',current_rise=0"; \
+	${idl_bin} -e "pro00710,'3p2','z','n',indgen(21)*1./20.,1,shotset='003',current_rise=0"; \
 	mv 11*.sav n_z416.sav
 
 te_z416.sav:
