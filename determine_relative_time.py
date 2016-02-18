@@ -36,10 +36,14 @@ def determine_relative_times_all_shots(shots, plot=True,
 
 def shot_exists(shot):
     r"""
-    Tries to open MDSplus tree, if opening errors returns False otherwise True.
+    Tries to read data from fiducial and current monitor nodes of rsx MDSplus tree.
+    If opening of tree or reading from nodes errors returns False otherwise True.
     """
     try:
-        mds.Tree('rsx', shot)
+        rsx_tree = mds.Tree('rsx', shot)
+        rsx_tree.getNode('\j_002_000').getData()
+        rsx_tree.getNode('\j_002_001').getData()
+        rsx_tree.getNode('\j_002_004').getData()
     except:
         return False
     return True
