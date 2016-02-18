@@ -11,17 +11,25 @@ import pidly
 import MDSplus as mds
 import sqlite3
 
-def determine_relative_times_all_shots(shots, plot=False):
+
+def determine_relative_times_all_shots(shots, plot=True,
+                                       time_range=[1.5, 2.5]):
     r"""
-    Determine relative times for each shot using Jason's script, store in sql database.
+    Determine relative times for each shot using Jason's script, store in sql
+    database.
     """
     for shot in shots:
+        print 'shot:', shot
         if shot_exists(shot):
             times = determine_times_from_idl(shot)
-            store_in_sql(shot, times)
+            store_times_in_sql(shot, times)
             if plot:
-                raw_signals = retrieve_signals(shot)
-                plot(raw_signals, time_range, log_sacle, times)
+                raw_signals = retrieve_fiducial_signals(shot)
+                save_as = '../output/' + str(shot) + '.png'
+                plot_signals(raw_signals,
+                             zero_times=[times['phase_zero'], times['ramp']],
+                             legend=True, show=False, time_range=time_range,
+                             save_as=save_as)
         else:
             store_nonexistence_in_sql(shot)
 
@@ -58,10 +66,34 @@ def determine_times_from_idl(shot,
     return times
 
 
-def store_times_in_sql():
+def store_times_in_sql(shot, times):
     r"""
+    Store times in sql database.
     """
-    pass
+    connection = sqlite3.connect('../output/relative_times.db')
+    cursor = connection.cursor()
+    insert_statement = 'INSERT INTO RelativeTimes values(?, ?, ?, ?, ?, ?, ?);'
+    cursor.execute(insert_statement, [shot, True, times['phase_zero'],
+                                      times['phase_zero_index'],
+                                      times['period'], times['ramp'],
+                                      times['ramp_index']])
+    connection.commit()
+    cursor.close()
+    connection.close()
+
+
+def store_nonexistence_in_sql(shot):
+    r"""
+    Store shot with existense set to False.
+    """
+    connection = sqlite3.connect('../output/relative_times.db')
+    cursor = connection.cursor()
+    insert_statement = 'INSERT INTO RelativeTimes values(?, ?, ?, ?, ?, ?, ?);'
+    cursor.execute(insert_statement, [shot, False, None, None, None, None,
+                                      None])
+    connection.commit()
+    cursor.close()
+    connection.close()
 
 
 def retrieve_fiducial_signals(shot):
@@ -115,7 +147,7 @@ def plot_signals(raw_signals, log_scale=True, time_range=None,
     if zero_times:
         np.asarray(zero_times)
         for zero_time in zero_times:
-            plt.axvline(zero_time)
+            plt.axvline(zero_time*1e3)
     if show:
         plt.show()
     if save_as:
