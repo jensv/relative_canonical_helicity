@@ -52,15 +52,16 @@ def determine_times_from_idl(shot,
     """
     idl = pidly.IDL(idl_path)
     idl.pro('pro00100, 16670, trig_index, trig_time, period;')
-    phase_zero_time = idl.trig_time[0]
-    phase_zero_index = idl.trig_index[0]
-    period = idl.period[0]
+    phase_zero_time = float(idl.trig_time)*1e-3
+    phase_zero_index = int(idl.trig_index)
+    period = float(idl.period)*1e-3
     idl.pro('pro00100, 16670, trig_index, trig_time, period, current_rise=1;')
-    ramp_time = idl.trig_time[0]
-    ramp_index = idl.trig_index[0]
+    ramp_time = float(idl.trig_time)*1e-3
+    ramp_index = int(idl.trig_index)
     idl.close()
     times = {'phase_zero': phase_zero_time,
              'phase_zero_index': phase_zero_index,
+             'period': period,
              'ramp': ramp_time,
              'ramp_index': ramp_index}
     return times
