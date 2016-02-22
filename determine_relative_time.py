@@ -45,6 +45,7 @@ def shot_exists(shot):
         rsx_tree.getNode('\j_002_001').getData()
         rsx_tree.getNode('\j_002_004').getData()
     except:
+        print '%i does not exist' % shot
         return False
     return True
 
