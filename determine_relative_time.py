@@ -56,11 +56,11 @@ def determine_times_from_idl(shot,
     Run relative time script and return dictionary of ouputs.
     """
     idl = pidly.IDL(idl_path)
-    idl.pro('pro00100, 16670, trig_index, trig_time, period;')
+    idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period;')
     phase_zero_time = float(idl.trig_time)*1e-3
     phase_zero_index = int(idl.trig_index)
     period = float(idl.period)*1e-3
-    idl.pro('pro00100, 16670, trig_index, trig_time, period, current_rise=1;')
+    idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period, current_rise=1;')
     ramp_time = float(idl.trig_time)*1e-3
     ramp_index = int(idl.trig_index)
     idl.close()
@@ -158,3 +158,4 @@ def plot_signals(raw_signals, log_scale=True, time_range=None,
         plt.show()
     if save_as:
         plt.savefig(save_as)
+    plt.close()
