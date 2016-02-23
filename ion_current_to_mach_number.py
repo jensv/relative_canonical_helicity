@@ -18,14 +18,15 @@ def mach_number(shot, droop_factor_l=0.8e3, droop_factor_r=0.7e3,
     (r_raw, r_time,
      l_raw, l_time) = read_isat(shot, tree_name, mach_r_node_name,
                                 mach_l_node_name)
+    assert np.allclose(r_time, l_time), 'Sample times for left and right are not identical.'
     r_raw_no_offset, r_background_std = remove_offset(r_raw,
                                                       zero_signal_points)
     l_raw_no_offset, l_background_std = remove_offset(l_raw,
                                                       zero_signal_points)
     r_isat = correct_droop(r_raw_no_offset, r_time, droop_factor_r)
     l_isat = correct_droop(l_raw_no_offset, l_time, droop_factor_l)
-    determine_mach(r_isat, l_isat, mach_calibration_factor)
-    return
+    mach = determine_mach(r_isat, l_isat, mach_calibration_factor)
+    return mach, r_time, r_background_std, l_background_std
 
 
 def read_isat(shot, tree_name, mach_r_node_name, mach_l_node_name):
