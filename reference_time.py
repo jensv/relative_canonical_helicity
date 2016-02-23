@@ -12,8 +12,8 @@ import MDSplus as mds
 import sqlite3
 
 
-def determine_relative_times_all_shots(shots, plot=True,
-                                       time_range=[1.5, 2.5]):
+def determine_reference_times_all_shots(shots, plot=True,
+                                        time_range=[1.5, 2.5]):
     r"""
     Determine relative times for each shot using Jason's script, store in sql
     database.
