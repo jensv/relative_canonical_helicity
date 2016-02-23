@@ -12,6 +12,7 @@ from os.path import exists
 import scipy.io.idl as idl
 from scipy.interpolate import griddata, SmoothBivariateSpline, LSQBivariateSpline
 import sys
+from collections import MutableSequence
 
 
 def read_data(file_name):
@@ -251,13 +252,20 @@ def reshape_scalar(scalar):
     return scalar
 
 
-def write_to_structured_grid(file_name, data, label, mesh):
+def write_to_structured_grid(file_name, data, labels, mesh):
     r"""
     Write scalar or vector to a structured grid vtk file.
     """
+    point_data = []
+    if isinstance(labels, MutableSequence):
+        for i, label in enumerate(labels):
+            point_data.append((label, data[i]))
+    else:
+        point_data = [(labels, data)]
+
     write_structured_grid(file_name,
                           mesh,
-                          point_data=[(label, data)])
+                          point_data=point_data)
 
 
 def main():
@@ -314,18 +322,20 @@ def main():
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
             vector = reshape_vector(vector_resampled_x, vector_resampled_y,
                                      vector_resampled_z)
+            print 'res_x', residual_x, 'res_y', residual_y, 'res_z', residual_z
             output_path = input_dict['output_path'] + '_%06i.vts' % time_point
             write_to_structured_grid(output_path, vector,
                                      input_dict['symbol'], mesh)
     if input_dict['data_type'] == 'scalar':
-        measurements = read_data(input_dict['input_path'])
-        (x_min, x_max, y_min, y_max) = determine_sample_bounds([measurements])
+        density_measurements = read_data(input_dict['density_path'])
+        temp_measurements = read_data(input_dict['temperature_path'])
+        (x_min, x_max, y_min, y_max) = determine_sample_bounds([density_measurements])
         for time_point in input_dict['time_points']:
-            spline = fit_bivariate_splines(measurements, time_point,
+            spline = fit_bivariate_splines(density_measurements, time_point,
                                            weigth=None, kx=kx, ky=ky,
                                            s=smooth_factor)
             (scalar_resampled,
-             residual,
+             residual_dens,
              x_grid,
              y_grid) = evaluate_spline_on_structured_grid(spline,
                                                           x_min, x_max,
@@ -333,9 +343,27 @@ def main():
                                                           x_points,
                                                           y_points)
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
-            scalar = reshape_scalar(scalar_resampled)
+            density = reshape_scalar(scalar_resampled)
+
+            spline = fit_bivariate_splines(temp_measurements, time_point,
+                                           weigth=None, kx=kx, ky=ky,
+                                           s=smooth_factor)
+            (scalar_resampled,
+             residual_temp,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
+            mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
+            temperature = reshape_scalar(scalar_resampled)
+
+            scalar = [density, temperature]
+            symbols = [input_dict['symbol_density'], input_dict['symbol_temperature']]
+            print 'residual density', residual_dens, 'residual temperature', residual_temp
             output_path = input_dict['output_path'] + '_%06i.vts' % time_point
-            write_to_structured_grid(output_path, scalar, input_dict['symbol'],
+            write_to_structured_grid(output_path, scalar, symbols,
                                      mesh)
 
 
@@ -354,10 +382,10 @@ def handle_args():
                                  'smooth_factor', 'x_points', 'y_points')):
             input_dict[key] = sys.argv[1:][i]
     if data_type == 'scalar':
-        assert len(sys.argv) == 12, msg
-        msg = 'scalar type requires 10 arguments: input file, z_position, time_points, output_file, symbol, kx, ky, smooth_factor, x_points, y_points'
-        for i, key in enumerate(('data_type', 'input_path', 'z_position',
-                                 'time_points', 'output_path', 'symbol', 'kx',
+        assert len(sys.argv) == 14, msg
+        msg = 'scalar type requires 12 arguments: input file, z_position, time_points, output_file, symbol_density, symbol_temperature, kx, ky, smooth_factor, x_points, y_points'
+        for i, key in enumerate(('data_type', 'density_path', 'temperature_path', 'z_position',
+                                 'time_points', 'output_path', 'symbol_density', 'symbol_temperature', 'kx',
                                  'ky', 'smooth_factor', 'x_points', 'y_points')):
             input_dict[key] = sys.argv[1:][i]
     input_dict['time_points'] = np.arange(int(input_dict['time_points']))
