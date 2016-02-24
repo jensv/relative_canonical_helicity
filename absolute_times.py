@@ -34,20 +34,20 @@ def absolute_times(shot, database_path, delays, reference='phase',
     """
     msg = "reference has to be 'phase' or 'ramp'"
     assert reference == 'phase' or reference == 'ramp', msg
-    connection = sqlite3.connection(database_path)
+    connection = sqlite3.connect(database_path)
     cursor = connection.cursor()
 
     if reference == 'phase':
         if number_of_delays:
             delays = np.arange(number_of_delays)*2*np.pi/number_of_delays
-        cursor.execute("Select phase_time, period WHERE shot=?" +
-                       "FROM RelativeTimes", [shot])
-        phase_time, period = cursor.fetchall()
-        times = times_from_phase(phase_time, period, delays)
+        cursor.execute("Select zero_phase_time, period FROM RelativeTimes " +
+                       "WHERE shot=?", [shot])
+        zero_phase_time, period = cursor.fetchall()[0]
+        times = times_from_phase(zero_phase_time, period, delays)
     else:
-        cursor.execute("Select ramp_time WHERE shot=? FROM RelativeTimes",
+        cursor.execute("Select ramp_time FROM RelativeTimes WHERE shot=?",
                        [shot])
-        ramp_time = cursor.fetchall()
+        ramp_time = cursor.fetchall()[0][0]
         times = times_from_current_ramp(ramp_time, delays)
 
     cursor.close()
