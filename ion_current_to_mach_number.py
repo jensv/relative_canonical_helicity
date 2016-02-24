@@ -53,7 +53,7 @@ def remove_offset(raw_signal, zero_signal_points):
     raw_signal_no_offset = raw_signal - offset
     background_std = raw_signal[:zero_signal_points].std()
     msg = 'zero_signal_points includes measurements where signal exceeds three times the std.'
-    assert np.sum(raw_signal > 3. * background_std), msg
+    assert np.sum(raw_signal_no_offset > 3. * background_std), msg
     return raw_signal_no_offset, background_std
 
 
