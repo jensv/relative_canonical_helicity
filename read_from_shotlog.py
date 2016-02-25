@@ -42,12 +42,13 @@ def read_mach_settings_shotlog(shot):
 def store_mach_settings_sql(shot, mach_settings, database):
     r"""
     """
-    connection = sqlite3.connection()
+    connection = sqlite3.connect(database)
     cursor = connection.cursor()
     cursor.execute("UPDATE Shots SET mach_x = ?, mach_y = ?, mach_z = ?, " +
                    "mach_orientation = ?  WHERE shot=?;",
                    [mach_settings['mach_x'], mach_settings['mach_y'],
-                    mach_settings['mach_z'], shot])
+                    mach_settings['mach_z'], mach_settings['mach_orientation'],
+                    shot])
     connection.commit()
     cursor.close()
     connection.close()
