@@ -12,7 +12,7 @@ import MDSplus as mds
 import sqlite3
 
 
-def determine_reference_times_all_shots(shots, plot=True,
+def determine_reference_times_all_shots(shots, database, plot=True,
                                         time_range=[1.5, 2.5]):
     r"""
     Determine relative times for each shot using Jason's script, store in sql
@@ -22,7 +22,7 @@ def determine_reference_times_all_shots(shots, plot=True,
         print 'shot:', shot
         if shot_exists(shot):
             times = determine_times_from_idl(shot)
-            store_times_in_sql(shot, times)
+            store_times_in_sql(shot, times, database)
             if plot:
                 raw_signals = retrieve_fiducial_signals(shot)
                 save_as = '../output/' + str(shot) + '.png'
@@ -31,7 +31,7 @@ def determine_reference_times_all_shots(shots, plot=True,
                              legend=True, show=False, time_range=time_range,
                              save_as=save_as)
         else:
-            store_nonexistence_in_sql(shot)
+            store_nonexistence_in_sql(shot, database)
 
 
 def shot_exists(shot):
