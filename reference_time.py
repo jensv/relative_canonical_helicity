@@ -72,13 +72,16 @@ def determine_times_from_idl(shot,
     return times
 
 
-def store_times_in_sql(shot, times):
+def store_times_in_sql(shot, times, database):
     r"""
     Store times in sql database.
     """
-    connection = sqlite3.connect('../output/relative_times.db')
+    connection = sqlite3.connect(database)
     cursor = connection.cursor()
-    insert_statement = 'INSERT INTO RelativeTimes values(?, ?, ?, ?, ?, ?, ?);'
+    insert_statement = ("INSERT INTO Shots (shot, existence, " +
+                        "zero_phase_time, zero_phase_index, period, "
+                        "ramp_time, ramp_index) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?);")
     cursor.execute(insert_statement, [shot, True, times['phase_zero'],
                                       times['phase_zero_index'],
                                       times['period'], times['ramp'],
@@ -88,15 +91,15 @@ def store_times_in_sql(shot, times):
     connection.close()
 
 
-def store_nonexistence_in_sql(shot):
+def store_nonexistence_in_sql(shot, database):
     r"""
     Store shot with existense set to False.
     """
-    connection = sqlite3.connect('../output/relative_times.db')
+    connection = sqlite3.connect(database)
     cursor = connection.cursor()
-    insert_statement = 'INSERT INTO RelativeTimes values(?, ?, ?, ?, ?, ?, ?);'
-    cursor.execute(insert_statement, [shot, False, None, None, None, None,
-                                      None])
+    insert_statement = ("INSERT INTO Shots (shots, existence) VALUES +"
+                        "(?, ?);")
+    cursor.execute(insert_statement, [shot, False])
     connection.commit()
     cursor.close()
     connection.close()
