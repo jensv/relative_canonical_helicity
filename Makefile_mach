@@ -1,0 +1,12 @@
+python_script=~/rsx_analysis/writing_to_vtk/source/structured_vtk.py 
+database=~/rsx_analysis/shots_database/shots.db 
+time_points=21
+time_type=phase
+kx=1                                                                                                                                                                                                                                       
+ky=1                                                                                                                                                                                                                                       
+x_points=30                                                                                                                                                                                                                                
+y_points=30                                                                                                                                                                                                                                
+smooth_factor=None 
+
+mach_z416_000000.vts :
+	ipython ${python_script} partial_vector False plane ${database} Shots velocity mach_plane_1 phase ${time_type} ${time_points} mach_z416 mach ${kx} ${ky} ${smooth_factor} ${x_points} ${y_points}  
