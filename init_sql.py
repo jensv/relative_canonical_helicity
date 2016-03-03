@@ -19,7 +19,8 @@ cursor.execute("CREATE TABLE Shots(shot INTEGER, existence BOOLEAN, " +
                "period FLOAT, ramp_time FLOAT, ramp_index INTEGER, " +
                "mach_aquired BOOLEAN, mach_oscillates BOOLEAN, "
                "mach_x FLOAT, mach_y FLOAT, mach_z FLOAT, " +
-               "mach_orientation FLOAT);")
+               "mach_orientation FLOAT, mach_r_node STRING, " +
+               "mach_l_node STRING, shotlog STRING);")
 connection.commit()
 
 cursor.close()
