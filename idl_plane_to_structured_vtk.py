@@ -8,11 +8,17 @@ Created on Wed Dec  2 11:14:38 2015
 import numpy as np
 from pyvisfile.vtk import write_structured_grid
 from pytools.obj_array import make_obj_array
-from os.path import exists
 import scipy.io.idl as idl
 from scipy.interpolate import griddata, SmoothBivariateSpline, LSQBivariateSpline
-import sys
 from collections import MutableSequence
+
+import sys
+sys.path.append('../../read_from_sql')
+import read_from_sql
+sys.path.append('../../mach_probe_analysis')
+import ion_current_to_mach_number as ic_to_mach
+sys.path.append('../../time_alignment/source')
+import time_alignment as ta
 
 
 def read_data(file_name):
@@ -38,12 +44,12 @@ def resample_on_structutred_grid(data_dict,
     x_grid, y_grid = np.meshgrid(x_points, y_points)
     quantity_interpolated = griddata(np.dstack((data_dict['x_out'],
                                                 data_dict['y_out']))[0],
-                                               data_dict['a_out'][time_point],
-                                               (x_grid, y_grid),
-                                               method=method)
-    #quantity_interpolated = quantity_interpolated[x_slice, y_slice]
-    #x_grid = x_grid[x_slice, y_slice]
-    #y_grid = y_grid[x_slice, y_slice]
+                                     data_dict['a_out'][time_point],
+                                     (x_grid, y_grid),
+                                     method=method)
+    # quantity_interpolated = quantity_interpolated[x_slice, y_slice]
+    # x_grid = x_grid[x_slice, y_slice]
+    # y_grid = y_grid[x_slice, y_slice]
     return quantity_interpolated, x_grid, y_grid
 
 
@@ -144,8 +150,10 @@ def remove_nans_vector(vector, x_grid, y_grid):
             else:
                 indexes = np.s_[-(shape[axis] - nan_to_remove[axis]):]
             quantity = np.delete(quantity, indexes, axis=axis)
-            other_quantities[0] = np.delete(other_quantities[0], indexes, axis=axis)
-            other_quantities[1] = np.delete(other_quantities[1], indexes, axis=axis)
+            other_quantities[0] = np.delete(other_quantities[0], indexes,
+                                            axis=axis)
+            other_quantities[1] = np.delete(other_quantities[1], indexes,
+                                            axis=axis)
             x_grid = np.delete(x_grid, indexes, axis=axis)
             y_grid = np.delete(y_grid, indexes, axis=axis)
         vector[direction] = quantity
@@ -158,10 +166,14 @@ def determine_sample_bounds(data_dicts):
     r"""
     Determine the x,y bounds of the 2D sampling space.
     """
-    x_mins = np.asarray([np.nanmin(data_dict['x_out']) for data_dict in data_dicts])
-    x_maxs = np.asarray([np.nanmax(data_dict['x_out']) for data_dict in data_dicts])
-    y_mins = np.asarray([np.nanmin(data_dict['y_out']) for data_dict in data_dicts])
-    y_maxs = np.asarray([np.nanmax(data_dict['y_out']) for data_dict in data_dicts])
+    x_mins = np.asarray([np.nanmin(data_dict['x_out'])
+                        for data_dict in data_dicts])
+    x_maxs = np.asarray([np.nanmax(data_dict['x_out'])
+                        for data_dict in data_dicts])
+    y_mins = np.asarray([np.nanmin(data_dict['y_out'])
+                        for data_dict in data_dicts])
+    y_maxs = np.asarray([np.nanmax(data_dict['y_out'])
+                        for data_dict in data_dicts])
     x_min = x_mins.max()
     x_max = x_maxs.min()
     y_min = y_mins.max()
@@ -268,12 +280,9 @@ def write_to_structured_grid(file_name, data, labels, mesh):
                           point_data=point_data)
 
 
-def main():
+def build_vtk_from_idl(input_dict):
     r"""
-    Called from command line. Create a vector or scalar vtk file from idl sav
-    files.
     """
-    input_dict = handle_args()
     kx = input_dict['kx']
     ky = input_dict['ky']
     smooth_factor = input_dict['smooth_factor']
@@ -321,7 +330,7 @@ def main():
                                                           y_points)
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
             vector = reshape_vector(vector_resampled_x, vector_resampled_y,
-                                     vector_resampled_z)
+                                    vector_resampled_z)
             print 'res_x', residual_x, 'res_y', residual_y, 'res_z', residual_z
             output_path = input_dict['output_path'] + '_%06i.vts' % time_point
             write_to_structured_grid(output_path, vector,
@@ -329,7 +338,8 @@ def main():
     if input_dict['data_type'] == 'scalar':
         density_measurements = read_data(input_dict['density_path'])
         temp_measurements = read_data(input_dict['temperature_path'])
-        (x_min, x_max, y_min, y_max) = determine_sample_bounds([density_measurements])
+        (x_min, x_max,
+         y_min, y_max) = determine_sample_bounds([density_measurements])
         for time_point in input_dict['time_points']:
             spline = fit_bivariate_splines(density_measurements, time_point,
                                            weigth=None, kx=kx, ky=ky,
@@ -360,11 +370,181 @@ def main():
             temperature = reshape_scalar(scalar_resampled)
 
             scalar = [density, temperature]
-            symbols = [input_dict['symbol_density'], input_dict['symbol_temperature']]
-            print 'residual density', residual_dens, 'residual temperature', residual_temp
+            symbols = [input_dict['symbol_density'],
+                       input_dict['symbol_temperature']]
+            print ('residual density', residual_dens,
+                   'residual temperature', residual_temp)
             output_path = input_dict['output_path'] + '_%06i.vts' % time_point
             write_to_structured_grid(output_path, scalar, symbols,
                                      mesh)
+
+
+def build_vtk(input_dict):
+    r"""
+    Build vtk file by processing data from MDS+ tree.
+    """
+    kx = input_dict['kx']
+    ky = input_dict['ky']
+    smooth_factor = input_dict['smooth_factor']
+    x_points = input_dict['x_points']
+    y_points = input_dict['y_points']
+    campaign = input_dict['campaign']
+    database = input_dict['database']
+    time_points = input_dict['time_points']
+    table = input_dict['table']
+    msg = 'Only velocity is supported as partial vector'
+    assert input_dict['quantity'] == 'velocity', msg
+    if input_dict['geometry'] == 'plane':
+        orientations = [0, 90]
+        vector = np.zeros((3, x_points, y_points))
+        mach_out = [[], [], []]
+        x_out = [[], [], []]
+        y_out = [[], [], []]
+        z_out = [[], [], []]
+        for direction in orientations:
+            condition = ('(campaign =' + campaign + ') AND (mach_orientation' +
+                         ' = ' + str(direction) + ')')
+            cursor, connection = read_from_sql.cursor_with_rows(database,
+                                                                table,
+                                                                condition)
+            row = cursor.fetchone()
+            while row:
+                shot = row['shot']
+                times = ta.absolute_times(shot, row, [],
+                                          number_of_delays=time_points)
+                (mach, time,
+                 r_background_std,
+                 l_background_std) = ic_to_mach.mach_number(shot)
+                indexes = times_to_indexes(time, times)
+                if direction == 0:
+                    mach_out[3].append(mach[indexes])
+                    x_out[3].append(row['mach_x'])
+                    y_out[3].append(row['mach_y'])
+                    z_out[3].append(row['mach_z'])
+                if direction == 90:
+                    mach_out[2].append(mach[indexes])
+                    x_out[2].append(row['mach_x'])
+                    y_out[2].append(row['mach_y'])
+                    z_out[2].append(row['mach_z'])
+                row = cursor.fetchone()
+            vector_dicts = [{'x_out': x_out[2], 'y_out': y_out[2],
+                             'z_out': z_out[2], 'a_out': mach_out[2]},
+                            {'x_out': x_out[3], 'y_out': y_out[3],
+                             'z_out': z_out[3], 'a_out': mach_out[3]}]
+            (x_min, x_max,
+             y_min, y_max) = determine_sample_bounds(vector_dicts)
+            for time_point in time_points:
+                spline_y = fit_bivariate_splines(vector_dicts[0], time_point,
+                                                 weigth=None, kx=kx, ky=ky,
+                                                 s=smooth_factor)
+                spline_z = fit_bivariate_splines(vector_dicts[1], time_point,
+                                                 weigth=None, kx=kx, ky=ky,
+                                                 s=smooth_factor)
+
+                (vector_resampled_y,
+                 residual_y,
+                 x_grid,
+                 y_grid) = evaluate_spline_on_structured_grid(spline_y,
+                                                              x_min, x_max,
+                                                              y_min, y_max,
+                                                              x_points,
+                                                              y_points)
+                (vector_resampled_z,
+                 residual_z,
+                 x_grid,
+                 y_grid) = evaluate_spline_on_structured_grid(spline_z,
+                                                              x_min, x_max,
+                                                              y_min, y_max,
+                                                              x_points,
+                                                              y_points)
+                mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
+                vector = reshape_vector(vector[0], vector_resampled_y,
+                                        vector_resampled_z)
+                print 'res_y', residual_y, 'res_z', residual_z
+                output_path = (input_dict['output_path'] +
+                               '_%06i.vts' % time_point)
+                write_to_structured_grid(output_path, vector,
+                                         input_dict['symbol'], mesh)
+
+    if input_dict['geometry'] == 'line':
+        assert False, 'implement node passing to mach analysis'
+        vector = np.zeros((3, x_points, y_points))
+        mach_out = [[], [], []]
+        x_out = [[], [], []]
+        y_out = [[], [], []]
+        z_out = [[], [], []]
+        condition = ('(campaign =' + campaign + ') AND (mach_orientation' +
+                     ' = ' + str(direction) + ')')
+        cursor, connection = read_from_sql.cursor_with_rows(database,
+                                                            table,
+                                                            condition)
+        row = cursor.fetchone()
+        while row:
+            shot = row['shot']
+            times = ta.absolute_times(shot, row, [],
+                                      number_of_delays=time_points)
+            (mach, time,
+             r_background_std,
+             l_background_std) = ic_to_mach.mach_number(shot)
+            indexes = times_to_indexes(time, times)
+            if direction == 0:
+                mach_out[3].append(mach[indexes])
+            if direction == 180:
+                mach_out[3].append(-mach[indexes])
+                x_out[3].append(row['mach_x'])
+                y_out[3].append(row['mach_y'])
+                z_out[3].append(row['mach_z'])
+                row = cursor.fetchone()
+        vector_dicts = [{'x_out': x_out[3], 'y_out': y_out[3],
+                         'z_out': z_out[3], 'a_out': mach_out[3]}]
+        (x_min, x_max, y_min, y_max) = determine_sample_bounds(vector_dicts)
+        for time_point in time_points:
+            spline_z = fit_bivariate_splines(vector_dicts[1], time_point,
+                                             weigth=None, kx=kx, ky=ky,
+                                             s=smooth_factor)
+            (vector_resampled_z,
+             residual_z,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline_z,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
+            mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
+            vector = reshape_vector(vector[0], vector[1], vector_resampled_z)
+            print 'res_z', residual_z
+            output_path = input_dict['output_path'] + '_%06i.vts' % time_point
+            write_to_structured_grid(output_path, vector,
+                                     input_dict['symbol'], mesh)
+
+    if input_dict['geometry'] == 'point':
+        pass
+
+    read_from_sql.close(connection, cursor)
+
+
+def times_to_indexes(time, times):
+    r"""
+    """
+    indexes = np.searchsorted(time, times)
+    for i, index in enumerate(indexes):
+        indexes[i] = (index-1 +
+                      np.argmin([np.abs(times[i] - time[index - 1]),
+                                 np.abs(times[i] - time[index]),
+                                 np.abs(times[i] - time[index + 1])]))
+    return indexes
+
+
+def main():
+    r"""
+    Called from command line. Create a vector or scalar vtk file from idl sav
+    files.
+    """
+    input_dict = handle_args()
+    if input_dict['from_idl']:
+        build_vtk_from_idl(input_dict)
+    else:
+        build_vtk(input_dict)
 
 
 def handle_args():
@@ -374,19 +554,33 @@ def handle_args():
     data_type = sys.argv[1]
     input_dict = {}
     if data_type == 'vector':
-        msg = 'vector type requires 12 arguments: 3 input files, z_position, time_points, output_file, symbol, kx, ky, smooth_factor, x_points, y_points'
-        assert len(sys.argv) == 14, msg
-        for i, key in enumerate(('data_type', 'x_input_path', 'y_input_path',
-                                 'z_input_path', 'z_position', 'time_points',
-                                 'output_path', 'symbol', 'kx', 'ky',
-                                 'smooth_factor', 'x_points', 'y_points')):
+        msg = 'vector type requires 13 arguments: from_idl, 3 input files, z_position, time_points, output_file, symbol, kx, ky, smooth_factor, x_points, y_points'
+        assert len(sys.argv) == 15, msg
+        for i, key in enumerate(('data_type', 'from_idl', 'x_input_path',
+                                 'y_input_path', 'z_input_path', 'z_position',
+                                 'time_points', 'output_path', 'symbol', 'kx',
+                                 'ky', 'smooth_factor', 'x_points',
+                                 'y_points')):
             input_dict[key] = sys.argv[1:][i]
     if data_type == 'scalar':
-        assert len(sys.argv) == 14, msg
-        msg = 'scalar type requires 12 arguments: input file, z_position, time_points, output_file, symbol_density, symbol_temperature, kx, ky, smooth_factor, x_points, y_points'
-        for i, key in enumerate(('data_type', 'density_path', 'temperature_path', 'z_position',
-                                 'time_points', 'output_path', 'symbol_density', 'symbol_temperature', 'kx',
-                                 'ky', 'smooth_factor', 'x_points', 'y_points')):
+        msg = 'scalar type requires 13 arguments: from_idl, input file, z_position, time_points, output_file, symbol_density, symbol_temperature, kx, ky, smooth_factor, x_points, y_points'
+        assert len(sys.argv) == 15, msg
+        for i, key in enumerate(('data_type', 'from_idl', 'density_path',
+                                 'temperature_path', 'z_position',
+                                 'time_points', 'output_path',
+                                 'symbol_density', 'symbol_temperature', 'kx',
+                                 'ky', 'smooth_factor', 'x_points',
+                                 'y_points')):
+            input_dict[key] = sys.argv[1:][i]
+    if data_type == 'partial_vector':
+        msg = 'partial_vector type requires 15 argiments: ...'
+        assert len(sys.argv) == 17, msg
+        for i, key in enumerate(['data_type', 'from_idl', 'geometry',
+                                 'database_path', 'table',
+                                 'quanitity', 'campaign', 'time_type',
+                                 'time_points', 'output_path', 'symbol', 'kx',
+                                 'ky', 'smooth_factor', 'x_points',
+                                 'y_points']):
             input_dict[key] = sys.argv[1:][i]
     input_dict['time_points'] = np.arange(int(input_dict['time_points']))
     input_dict['kx'] = int(input_dict['kx'])
@@ -395,9 +589,14 @@ def handle_args():
         input_dict['smooth_factor'] = None
     else:
         input_dict['smooth_factor'] = int(input_dict['smooth_factor'])
+    if 'False'.lower() == input_dict['from_idl'].lower():
+        input_dict['from_idl'] = False
+    else:
+        input_dict['from_idl'] = True
     input_dict['x_points'] = int(input_dict['x_points'])
     input_dict['y_points'] = int(input_dict['y_points'])
-    input_dict['z_position'] = float(input_dict['z_position'])
+    if 'z_position' in input_dict.keys():
+        input_dict['z_position'] = float(input_dict['z_position'])
     return input_dict
 
 
