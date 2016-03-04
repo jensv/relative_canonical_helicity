@@ -9,4 +9,4 @@ y_points=30
 smooth_factor=None 
 
 mach_z416_000000.vts :
-	ipython ${python_script} partial_vector False plane ${database} Shots velocity mach_plane_1 phase ${time_type} ${time_points} mach_z416 mach ${kx} ${ky} ${smooth_factor} ${x_points} ${y_points}  
+	ipython ${python_script} partial_vector False plane ${database} Shots velocity mach_plane_1 ${time_type} ${time_points} mach_z416 mach ${kx} ${ky} ${smooth_factor} ${x_points} ${y_points}  
