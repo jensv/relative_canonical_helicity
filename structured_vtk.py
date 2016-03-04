@@ -13,12 +13,12 @@ from scipy.interpolate import griddata, SmoothBivariateSpline, LSQBivariateSplin
 from collections import MutableSequence
 
 import sys
-sys.path.append('../../read_from_sql')
+sys.path.append('/Users/vonderlinden2/rsx_analysis/read_from_sql')
 import read_from_sql
-sys.path.append('../../mach_probe_analysis')
+sys.path.append('/Users/vonderlinden2/rsx_analysis/mach_probe_analysis')
 import ion_current_to_mach_number as ic_to_mach
-sys.path.append('../../time_alignment/source')
-import time_alignment as ta
+sys.path.append('/Users/vonderlinden2/rsx_analysis/time_alignment/source')
+import absolute_times as at
 
 
 def read_data(file_name):
@@ -166,6 +166,9 @@ def determine_sample_bounds(data_dicts):
     r"""
     Determine the x,y bounds of the 2D sampling space.
     """
+    for i, data_dict in enumerate(data_dicts):
+        if len(data_dict['x_out']) == 0:
+            data_dicts.pop(i)
     x_mins = np.asarray([np.nanmin(data_dict['x_out'])
                         for data_dict in data_dicts])
     x_maxs = np.asarray([np.nanmax(data_dict['x_out'])
@@ -283,6 +286,7 @@ def write_to_structured_grid(file_name, data, labels, mesh):
 def build_vtk_from_idl(input_dict):
     r"""
     """
+    input_dict['time_points'] = np.arange(int(input_dict['time_points']))
     kx = input_dict['kx']
     ky = input_dict['ky']
     smooth_factor = input_dict['smooth_factor']
@@ -396,109 +400,119 @@ def build_vtk(input_dict):
     assert input_dict['quantity'] == 'velocity', msg
     if input_dict['geometry'] == 'plane':
         orientations = [0, 90]
-        vector = np.zeros((3, x_points, y_points))
-        mach_out = [[], [], []]
+        vector_empty = np.zeros((3, x_points, y_points))
+        mach_out_x = []
+        mach_out_y = []
+        mach_out_z = []
         x_out = [[], [], []]
         y_out = [[], [], []]
         z_out = [[], [], []]
         for direction in orientations:
-            condition = ('(campaign =' + campaign + ') AND (mach_orientation' +
+            #condition = ('(campaign = ' + campaign + ') AND (mach_orientation' +
+            #             ' = ' + str(direction) + ')')
+            condition = ('(mach_orientation' +
                          ' = ' + str(direction) + ')')
-            cursor, connection = read_from_sql.cursor_with_rows(database,
-                                                                table,
-                                                                condition)
+            cursor, connection = read_from_sql.cursor_with_rows(condition,
+                                                                database,
+                                                                table)
             row = cursor.fetchone()
             while row:
                 shot = row['shot']
-                times = ta.absolute_times(shot, row, [],
+                times = at.absolute_times(shot, row, [],
                                           number_of_delays=time_points)
                 (mach, time,
                  r_background_std,
                  l_background_std) = ic_to_mach.mach_number(shot)
                 indexes = times_to_indexes(time, times)
                 if direction == 0:
-                    mach_out[3].append(mach[indexes])
-                    x_out[3].append(row['mach_x'])
-                    y_out[3].append(row['mach_y'])
-                    z_out[3].append(row['mach_z'])
-                if direction == 90:
-                    mach_out[2].append(mach[indexes])
+                    mach_out_z.append(mach[indexes])
                     x_out[2].append(row['mach_x'])
                     y_out[2].append(row['mach_y'])
                     z_out[2].append(row['mach_z'])
+                if direction == 90:
+                    mach_out_y.append(mach[indexes])
+                    x_out[1].append(row['mach_x'])
+                    y_out[1].append(row['mach_y'])
+                    z_out[1].append(row['mach_z'])
                 row = cursor.fetchone()
-            vector_dicts = [{'x_out': x_out[2], 'y_out': y_out[2],
-                             'z_out': z_out[2], 'a_out': mach_out[2]},
-                            {'x_out': x_out[3], 'y_out': y_out[3],
-                             'z_out': z_out[3], 'a_out': mach_out[3]}]
-            (x_min, x_max,
-             y_min, y_max) = determine_sample_bounds(vector_dicts)
-            for time_point in time_points:
-                spline_y = fit_bivariate_splines(vector_dicts[0], time_point,
-                                                 weigth=None, kx=kx, ky=ky,
-                                                 s=smooth_factor)
-                spline_z = fit_bivariate_splines(vector_dicts[1], time_point,
+        mach_out_y = np.asarray(mach_out_y)
+        mach_out_z = np.asarray(mach_out_z)
+        mach_out_y = np.swapaxes(mach_out_y, 0, 1)
+        mach_out_z = np.swapaxes(mach_out_z, 0, 1)
+        mach_out = [mach_out_x, mach_out_y, mach_out_z]
+        vector_dicts = [{'x_out': x_out[1], 'y_out': y_out[1],
+                         'z_out': z_out[1], 'a_out': mach_out[1]},
+                        {'x_out': x_out[2], 'y_out': y_out[2],
+                         'z_out': z_out[2], 'a_out': mach_out[2]}]
+        (x_min, x_max,
+         y_min, y_max) = determine_sample_bounds(vector_dicts)
+        for time_point in xrange(time_points):
+            spline_y = fit_bivariate_splines(vector_dicts[0], time_point,
+                                             weigth=None, kx=kx, ky=ky,
+                                             s=smooth_factor)
+            spline_z = fit_bivariate_splines(vector_dicts[1], time_point,
                                                  weigth=None, kx=kx, ky=ky,
                                                  s=smooth_factor)
 
-                (vector_resampled_y,
-                 residual_y,
-                 x_grid,
-                 y_grid) = evaluate_spline_on_structured_grid(spline_y,
-                                                              x_min, x_max,
-                                                              y_min, y_max,
-                                                              x_points,
-                                                              y_points)
-                (vector_resampled_z,
-                 residual_z,
-                 x_grid,
-                 y_grid) = evaluate_spline_on_structured_grid(spline_z,
-                                                              x_min, x_max,
-                                                              y_min, y_max,
-                                                              x_points,
-                                                              y_points)
-                mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
-                vector = reshape_vector(vector[0], vector_resampled_y,
+            (vector_resampled_y,
+             residual_y,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline_y,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
+            (vector_resampled_z,
+             residual_z,
+             x_grid,
+             y_grid) = evaluate_spline_on_structured_grid(spline_z,
+                                                          x_min, x_max,
+                                                          y_min, y_max,
+                                                          x_points,
+                                                          y_points)
+            assert len(set(z_out[2] + z_out[1] + z_out[0])) == 1, 'Shots are not at same z.'
+            mesh = prepare_mesh(x_grid, y_grid, z_out[2][0])
+            vector = reshape_vector(vector_empty[0], vector_resampled_y,
                                         vector_resampled_z)
-                print 'res_y', residual_y, 'res_z', residual_z
-                output_path = (input_dict['output_path'] +
-                               '_%06i.vts' % time_point)
-                write_to_structured_grid(output_path, vector,
-                                         input_dict['symbol'], mesh)
+            print 'res_y', residual_y, 'res_z', residual_z
+            output_path = (input_dict['output_path'] +
+                           '_%06i.vts' % time_point)
+            write_to_structured_grid(output_path, vector,
+                                     input_dict['symbol'], mesh)
 
     if input_dict['geometry'] == 'line':
         assert False, 'implement node passing to mach analysis'
-        vector = np.zeros((3, x_points, y_points))
+        vector_empty = np.zeros((3, x_points, y_points))
         mach_out = [[], [], []]
         x_out = [[], [], []]
         y_out = [[], [], []]
         z_out = [[], [], []]
         condition = ('(campaign =' + campaign + ') AND (mach_orientation' +
                      ' = ' + str(direction) + ')')
-        cursor, connection = read_from_sql.cursor_with_rows(database,
-                                                            table,
-                                                            condition)
+        cursor, connection = read_from_sql.cursor_with_rows(condition,
+                                                            database,
+                                                            table)
         row = cursor.fetchone()
         while row:
             shot = row['shot']
-            times = ta.absolute_times(shot, row, [],
+            times = at.absolute_times(shot, row, [],
                                       number_of_delays=time_points)
             (mach, time,
              r_background_std,
              l_background_std) = ic_to_mach.mach_number(shot)
             indexes = times_to_indexes(time, times)
             if direction == 0:
-                mach_out[3].append(mach[indexes])
+                mach_out[2].append(mach[indexes])
             if direction == 180:
-                mach_out[3].append(-mach[indexes])
-                x_out[3].append(row['mach_x'])
-                y_out[3].append(row['mach_y'])
-                z_out[3].append(row['mach_z'])
-                row = cursor.fetchone()
-        vector_dicts = [{'x_out': x_out[3], 'y_out': y_out[3],
-                         'z_out': z_out[3], 'a_out': mach_out[3]}]
+                mach_out[2].append(-mach[indexes])
+            x_out[2].append(row['mach_x'])
+            y_out[2].append(row['mach_y'])
+            z_out[2].append(row['mach_z'])
+            row = cursor.fetchone()
+        vector_dicts = [{'x_out': x_out[2], 'y_out': y_out[2],
+                         'z_out': z_out[2], 'a_out': mach_out[2]}]
         (x_min, x_max, y_min, y_max) = determine_sample_bounds(vector_dicts)
-        for time_point in time_points:
+        for time_point in xrange(time_points):
             spline_z = fit_bivariate_splines(vector_dicts[1], time_point,
                                              weigth=None, kx=kx, ky=ky,
                                              s=smooth_factor)
@@ -511,7 +525,7 @@ def build_vtk(input_dict):
                                                           x_points,
                                                           y_points)
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
-            vector = reshape_vector(vector[0], vector[1], vector_resampled_z)
+            vector = reshape_vector(vector_empty[0], vector_empty[1], vector_resampled_z)
             print 'res_z', residual_z
             output_path = input_dict['output_path'] + '_%06i.vts' % time_point
             write_to_structured_grid(output_path, vector,
@@ -573,16 +587,16 @@ def handle_args():
                                  'y_points')):
             input_dict[key] = sys.argv[1:][i]
     if data_type == 'partial_vector':
-        msg = 'partial_vector type requires 15 argiments: ...'
+        msg = 'partial_vector type requires 16 argiments: ...'
         assert len(sys.argv) == 17, msg
         for i, key in enumerate(['data_type', 'from_idl', 'geometry',
-                                 'database_path', 'table',
-                                 'quanitity', 'campaign', 'time_type',
+                                 'database', 'table',
+                                 'quantity', 'campaign', 'time_type',
                                  'time_points', 'output_path', 'symbol', 'kx',
                                  'ky', 'smooth_factor', 'x_points',
                                  'y_points']):
             input_dict[key] = sys.argv[1:][i]
-    input_dict['time_points'] = np.arange(int(input_dict['time_points']))
+    input_dict['time_points'] = int(input_dict['time_points'])
     input_dict['kx'] = int(input_dict['kx'])
     input_dict['ky'] = int(input_dict['ky'])
     if 'None'.lower() == input_dict['smooth_factor'].lower():
