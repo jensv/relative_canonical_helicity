@@ -89,79 +89,6 @@ def evaluate_spline_curl_on_structured_grid(spline_x, spline_y, x_min, x_max,
     return curl, x_grid, y_grid
 
 
-def remove_nans(quantity, x_grid, y_grid):
-    r"""
-    """
-    nans = np.isnan(quantity)
-    if np.sum(nans) == 0:
-        return quantity, x_grid, y_grid
-
-    while not np.sum(np.isnan(quantity)) == 0:
-        shape = quantity.shape
-        nan_to_remove = np.asarray(np.where(np.isnan(quantity)))[:, 0]
-        if nan_to_remove[0] <= shape[0]/2.:
-            rows_to_remove = nan_to_remove[0] + 1
-        else:
-            rows_to_remove = shape[0] - nan_to_remove[0]
-        if nan_to_remove[1] <= shape[1]/2.:
-            columns_to_remove = nan_to_remove[1] + 1
-        else:
-            columns_to_remove = shape[1] - nan_to_remove[1]
-
-        axis = 0 if rows_to_remove >= columns_to_remove else 1
-
-        if nan_to_remove[axis] <= shape[axis]/2.:
-            indexes = np.s_[:nan_to_remove[axis] + 1]
-        else:
-            indexes = np.s_[-(shape[axis] - nan_to_remove[axis]):]
-        quantity = np.delete(quantity, indexes, axis=axis)
-        x_grid = np.delete(x_grid, indexes, axis=axis)
-        y_grid = np.delete(y_grid, indexes, axis=axis)
-    return quantity, x_grid, y_grid
-
-
-def remove_nans_vector(vector, x_grid, y_grid):
-    r"""
-    """
-    nans = np.isnan(vector)
-    if np.sum(nans) == 0:
-        return vector, x_grid, y_grid
-    directions = set([0, 1, 2])
-    for direction in range(3):
-        other_direc = list(directions.difference([direction]))
-        quantity = vector[direction]
-        other_quantities = [vector[other_direc[0]], vector[other_direc[1]]]
-        while not np.sum(np.isnan(quantity)) == 0:
-            shape = quantity.shape
-            nan_to_remove = np.asarray(np.where(np.isnan(quantity)))[:, 0]
-            if nan_to_remove[0] <= shape[0]/2.:
-                rows_to_remove = nan_to_remove[0] + 1
-            else:
-                rows_to_remove = shape[0] - nan_to_remove[0]
-            if nan_to_remove[1] <= shape[1]/2.:
-                columns_to_remove = nan_to_remove[1] + 1
-            else:
-                columns_to_remove = shape[1] - nan_to_remove[1]
-
-            axis = 0 if rows_to_remove >= columns_to_remove else 1
-
-            if nan_to_remove[axis] <= shape[axis]/2.:
-                indexes = np.s_[:nan_to_remove[axis] + 1]
-            else:
-                indexes = np.s_[-(shape[axis] - nan_to_remove[axis]):]
-            quantity = np.delete(quantity, indexes, axis=axis)
-            other_quantities[0] = np.delete(other_quantities[0], indexes,
-                                            axis=axis)
-            other_quantities[1] = np.delete(other_quantities[1], indexes,
-                                            axis=axis)
-            x_grid = np.delete(x_grid, indexes, axis=axis)
-            y_grid = np.delete(y_grid, indexes, axis=axis)
-        vector[direction] = quantity
-        vector[other_direc[0]] = other_quantities[0]
-        vector[other_direc[1]] = other_quantities[1]
-    return vector, x_grid, y_grid
-
-
 def determine_sample_bounds(data_dicts):
     r"""
     Determine the x,y bounds of the 2D sampling space.
@@ -440,16 +367,23 @@ def build_vtk(input_dict):
         mach_out_y = np.swapaxes(mach_out_y, 0, 1)
         mach_out_z = np.swapaxes(mach_out_z, 0, 1)
         mach_out = [mach_out_x, mach_out_y, mach_out_z]
-        vector_dicts = [{'x_out': x_out[1], 'y_out': y_out[1],
-                         'z_out': z_out[1], 'a_out': mach_out[1]},
-                        {'x_out': x_out[2], 'y_out': y_out[2],
-                         'z_out': z_out[2], 'a_out': mach_out[2]}]
+        vector_dicts_raw = [{'x_out': x_out[1], 'y_out': y_out[1],
+                             'z_out': z_out[1], 'a_out': mach_out[1]},
+                            {'x_out': x_out[2], 'y_out': y_out[2],
+                             'z_out': z_out[2], 'a_out': mach_out[2]}]
+        print 'shape, raw', len(vector_dicts_raw[0]['x_out'])
         (x_min, x_max,
-         y_min, y_max) = determine_sample_bounds(vector_dicts)
+         y_min, y_max) = determine_sample_bounds(vector_dicts_raw)
         for time_point in xrange(time_points):
+            vector_dicts = [remove_nans(vector_dicts_raw[0], time_point),
+                            remove_nans(vector_dicts_raw[1], time_point)]
+            print 'shape, raw', len(vector_dicts_raw[0]['x_out'])
+            print 'shapes', vector_dicts[0]['x_out'].shape, vector_dicts[0]['y_out'].shape, vector_dicts[0]['a_out'][time_point].shape
+            print 'y_nans', np.sum(np.isnan(vector_dicts[0]['a_out'][time_point]))
             spline_y = fit_bivariate_splines(vector_dicts[0], time_point,
                                              weigth=None, kx=kx, ky=ky,
                                              s=smooth_factor)
+            print 'z_nans', np.sum(np.isnan(vector_dicts[1]['a_out'][time_point]))
             spline_z = fit_bivariate_splines(vector_dicts[1], time_point,
                                                  weigth=None, kx=kx, ky=ky,
                                                  s=smooth_factor)
@@ -535,6 +469,25 @@ def build_vtk(input_dict):
         pass
 
     read_from_sql.close(connection, cursor)
+
+
+def remove_nans(vector_dict, time_point):
+    r"""
+    """
+
+    indexes_of_nans = []
+    for i, value in enumerate(vector_dict['a_out'][time_point]):
+        if np.isnan(value):
+            indexes_of_nans.append(i)
+    print indexes_of_nans
+    vector_dict_nan_removed = {'a_out': np.delete(vector_dict['a_out'][time_point],
+                                                  indexes_of_nans),
+                               'x_out': np.delete(vector_dict['a_out'],
+                                                  indexes_of_nans),
+                               'y_out': np.delete(vector_dict['a_out'],
+                                                  indexes_of_nans),
+                               }
+    return vector_dict_nan_removed
 
 
 def times_to_indexes(time, times):
