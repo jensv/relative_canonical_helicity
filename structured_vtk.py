@@ -55,10 +55,16 @@ def resample_on_structutred_grid(data_dict,
 
 def fit_bivariate_splines(data_dict, time_point, weigth=None, kx=3, ky=3,
                           s=None):
-    spline = SmoothBivariateSpline(data_dict['x_out'],
-                                   data_dict['y_out'],
-                                   data_dict['a_out'][time_point],
-                                   kx=kx, ky=ky, s=s)
+    if len(np.asarray(data_dict['a_out']).shape) == 1:
+        spline = SmoothBivariateSpline(data_dict['x_out'],
+                                       data_dict['y_out'],
+                                       data_dict['a_out'],
+                                       kx=kx, ky=ky, s=s)
+    else:
+        spline = SmoothBivariateSpline(data_dict['x_out'],
+                                       data_dict['y_out'],
+                                       data_dict['a_out'][time_point],
+                                       kx=kx, ky=ky, s=s)
     return spline
 
 
@@ -371,15 +377,11 @@ def build_vtk(input_dict):
                              'z_out': z_out[1], 'a_out': mach_out[1]},
                             {'x_out': x_out[2], 'y_out': y_out[2],
                              'z_out': z_out[2], 'a_out': mach_out[2]}]
-        print 'shape, raw', len(vector_dicts_raw[0]['x_out'])
         (x_min, x_max,
          y_min, y_max) = determine_sample_bounds(vector_dicts_raw)
         for time_point in xrange(time_points):
             vector_dicts = [remove_nans(vector_dicts_raw[0], time_point),
                             remove_nans(vector_dicts_raw[1], time_point)]
-            print 'shape, raw', len(vector_dicts_raw[0]['x_out'])
-            print 'shapes', vector_dicts[0]['x_out'].shape, vector_dicts[0]['y_out'].shape, vector_dicts[0]['a_out'][time_point].shape
-            print 'y_nans', np.sum(np.isnan(vector_dicts[0]['a_out'][time_point]))
             spline_y = fit_bivariate_splines(vector_dicts[0], time_point,
                                              weigth=None, kx=kx, ky=ky,
                                              s=smooth_factor)
@@ -479,12 +481,11 @@ def remove_nans(vector_dict, time_point):
     for i, value in enumerate(vector_dict['a_out'][time_point]):
         if np.isnan(value):
             indexes_of_nans.append(i)
-    print indexes_of_nans
     vector_dict_nan_removed = {'a_out': np.delete(vector_dict['a_out'][time_point],
                                                   indexes_of_nans),
-                               'x_out': np.delete(vector_dict['a_out'],
+                               'x_out': np.delete(vector_dict['x_out'],
                                                   indexes_of_nans),
-                               'y_out': np.delete(vector_dict['a_out'],
+                               'y_out': np.delete(vector_dict['y_out'],
                                                   indexes_of_nans),
                                }
     return vector_dict_nan_removed
