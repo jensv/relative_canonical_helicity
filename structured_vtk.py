@@ -363,7 +363,7 @@ def build_vtk(input_dict):
                     y_out[2].append(row['mach_y'])
                     z_out[2].append(row['mach_z'])
                 if direction == 90:
-                    mach_out_y.append(mach[indexes])
+                    mach_out_y.append(-mach[indexes])
                     x_out[1].append(row['mach_x'])
                     y_out[1].append(row['mach_y'])
                     z_out[1].append(row['mach_z'])
