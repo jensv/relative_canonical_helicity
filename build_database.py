@@ -14,18 +14,17 @@ import sqlite3
 import numpy as np
 from read_from_shotlog import read_and_store_shotlog
 from reference_time import determine_reference_times_all_shots
-from manual_entries import add_manual_entries
 
 
 def build_database(database='shots.db', start=15253, end=17623):
     r"""
     Call functions that populate database.
     """
-    for shot in xrange(start, end):
-        read_and_store_shotlog(shot, database=database, start=True)
+    read_and_store_shotlog(range(start, end), database=database, start=True)
+    print "Classifying by campaign"
     add_campaigns(database)
-    add_manual_entries(database, start, end)
-    add_reference_times(start=False)
+    add_manual_entries(database)
+    add_reference_times(database)
 
 
 def add_campaigns(database):
@@ -35,8 +34,9 @@ def add_campaigns(database):
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM Shots")
-    for row in cursor.fetchall():
-        assign_campaigns(row['shot'])
+    rows = cursor.fetchall()
+    for row in rows:
+        campaigns = assign_campaigns(row['shot'])
         cursor.execute('UPDATE Shots SET campaigns = ? WHERE shot = ?',
                        [campaigns, row['shot']])
     connection.commit()
@@ -82,20 +82,20 @@ def add_reference_times(database):
     cursor.execute("SELECT * FROM Shots")
     rows = cursor.fetchall()
     shots = [row['shot'] for row in rows]
-    determine_reference_times_all_shots(shots, database, plot=True)
+    determine_reference_times_all_shots(shots, database, start=False, plot=False)
 
 
-
-
-def add_manuel_entries(database):
+def add_manual_entries(database):
     r"""
     """
     connection = sqlite3.connect(database)
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM Shots")
-    for row in cursor.fetchall():
+    rows = cursor.fetchall()
+    for row in rows:
         shot = row['shot']
+        print "Add manual entries to shot %i" % shot
         manual_settings = {'fiducial_a_node': '\j_002_000',
                            'fiducial_b_node': '\j_002_001',
                            'bias_current_node': '\j_002_004'}
@@ -126,9 +126,9 @@ def add_manuel_entries(database):
             manual_settings['mach_l_loops'] = 1
             manual_settings['mach_r_monitor_volts_per_amp'] = 1
             manual_settings['mach_l_monitor_volts_per_amp'] = 1
-        for key in manual_settings.keys:
-            cursor.execute("UPDATE Shots " + key + " = :value " +
-                           "WHERE shot = :shot",
+        for key in manual_settings.keys():
+            cursor.execute("UPDATE Shots SET " + key + " = :value " +
+                           "WHERE shot = :shot;",
                            {'value': manual_settings[key], 'shot': shot})
     connection.commit()
     cursor.close()
