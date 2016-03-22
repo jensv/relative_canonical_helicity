@@ -5,10 +5,10 @@ Created on Tue Feb 23 10:05:08 2016
 @author: Jens von der Linden
 """
 
-import sqlite3
 import numpy as np
 
-def absolute_times(shot, database_path, delays, reference='phase',
+
+def absolute_times(shot, shot_settings, delays, reference='phase',
                    number_of_delays=None):
     r"""
     Return absolute times for a shot, look up reference in sql database.
@@ -34,24 +34,17 @@ def absolute_times(shot, database_path, delays, reference='phase',
     """
     msg = "reference has to be 'phase' or 'ramp'"
     assert reference == 'phase' or reference == 'ramp', msg
-    connection = sqlite3.connect(database_path)
-    cursor = connection.cursor()
 
     if reference == 'phase':
         if number_of_delays:
             delays = np.arange(number_of_delays)*2*np.pi/number_of_delays
-        cursor.execute("Select zero_phase_time, period FROM RelativeTimes " +
-                       "WHERE shot=?", [shot])
-        zero_phase_time, period = cursor.fetchall()[0]
+        zero_phase_time, period = (shot_settings['zero_phase_time'],
+                                   shot_settings['period'])
         times = times_from_phase(zero_phase_time, period, delays)
     else:
-        cursor.execute("Select ramp_time FROM RelativeTimes WHERE shot=?",
-                       [shot])
-        ramp_time = cursor.fetchall()[0][0]
+        ramp_time = shot_settings['ramp_time']
         times = times_from_current_ramp(ramp_time, delays)
 
-    cursor.close()
-    connection.close()
     return times
 
 
