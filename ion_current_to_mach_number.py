@@ -11,9 +11,10 @@ import MDSplus as mds
 
 def mach_number(shot, droop_factor_l=0.8e3, droop_factor_r=0.7e3,
                 mach_calibration_factor=0.45, zero_signal_points=2999,
-                tree_name='rsx', mach_r_node_name='\j_008_014',
-                mach_l_node_name='\j_008_015'):
+                tree_name='rsx', mach_r_node_name='\j_008_015',
+                mach_l_node_name='\j_008_014'):
     r"""
+    Top level mach probe analysis function.
     """
     (r_raw, r_time,
      l_raw, l_time) = read_isat(shot, tree_name, mach_r_node_name,
@@ -34,8 +35,8 @@ def read_isat(shot, tree_name, mach_r_node_name, mach_l_node_name):
     Read saturation current measurements from MDS+ database.
     """
     rsx_tree = mds.Tree(tree_name, shot)
-    mach_r_node = rsx_tree.getNode('\j_008_014')
-    mach_l_node = rsx_tree.getNode('\j_008_015')
+    mach_r_node = rsx_tree.getNode(mach_r_node_name)
+    mach_l_node = rsx_tree.getNode(mach_l_node_name)
     mach_r_data = mach_r_node.getData()
     mach_l_data = mach_l_node.getData()
     mach_r_raw = np.asarray(mach_r_data.getValue())
