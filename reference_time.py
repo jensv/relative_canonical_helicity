@@ -13,41 +13,88 @@ import sqlite3
 
 
 def determine_reference_times_all_shots(shots, database, plot=True,
-                                        time_range=[1.5, 2.5]):
+                                        time_range=[1.5, 2.5], start=False):
     r"""
     Determine relative times for each shot using Jason's script, store in sql
     database.
     """
     for shot in shots:
+        connection = sqlite3.connect(database)
+        cursor = connection.cursor()
+        cursor.execute("SELECT fiducial_a_node, fiducial_b_node, " +
+                       "bias_current_node FROM Shots WHERE shot = :shot;",
+                       {'shot': shot})
+        fiducial_a_node, fiducial_b_node, bias_current_node = cursor.fetchone()
+        cursor.close()
+        connection.close()
+
         print 'shot:', shot
-        if shot_exists(shot):
-            times = determine_times_from_idl(shot)
-            store_times_in_sql(shot, times, database)
+        determine_time, existence = shot_exists(shot, fiducial_a_node,
+                                                fiducial_b_node,
+                                                bias_current_node)
+        if determine_time:
+            times, success = determine_times_from_idl(shot)
+            store_times_in_sql(shot, times, database, start=start)
             if plot:
-                raw_signals = retrieve_fiducial_signals(shot)
+                raw_signals = retrieve_fiducial_signals(shot, fiducial_a_node,
+                                                        fiducial_b_node,
+                                                        bias_current_node)
                 save_as = '../output/' + str(shot) + '.png'
-                plot_signals(raw_signals,
-                             zero_times=[times['phase_zero'], times['ramp']],
-                             legend=True, show=False, time_range=time_range,
-                             save_as=save_as)
-        else:
-            store_nonexistence_in_sql(shot, database)
+                if success:
+                    pass
+                    #plot_signals(raw_signals,
+                    #             zero_times=[times['phase_zero'], times['ramp']],
+                    #             legend=True, show=False, time_range=time_range,
+                    #             save_as=save_as)
+                else:
+                    pass
+                    #plot_signals(raw_signals,
+                    #             legend=True, show=False, time_range=time_range,
+                    #             save_as=save_as)
+        store_existence_in_sql(shot, database, existence)
 
 
-def shot_exists(shot):
+def shot_exists(shot, fiducial_a_node, fiducial_b_node, bias_current_node):
     r"""
     Tries to read data from fiducial and current monitor nodes of rsx MDSplus tree.
     If opening of tree or reading from nodes errors returns False otherwise True.
     """
+    exists_in_mdsplus = True
+    fiducial_a_signal_exists = True
+    fiducial_b_signal_exists = True
+    bias_current_signal_exists = True
     try:
         rsx_tree = mds.Tree('rsx', shot)
-        rsx_tree.getNode('\j_002_000').getData()
-        rsx_tree.getNode('\j_002_001').getData()
-        rsx_tree.getNode('\j_002_004').getData()
     except:
         print '%i does not exist' % shot
-        return False
-    return True
+        exists_in_mdsplus = False
+    if exists_in_mdsplus:
+        try:
+            node = rsx_tree.getNode(fiducial_a_node).getData()
+            assert not len(node.getValue().getShape()) == 0
+            assert node.getValue().size >= 10000
+        except:
+            fiducial_a_signal_exists = False
+        try:
+            node = rsx_tree.getNode(fiducial_b_node).getData()
+            assert not len(node.getValue().getShape()) == 0
+            assert node.getValue().size >= 10000
+        except:
+            fiducial_b_signal_exists = False
+        try:
+            node = rsx_tree.getNode(bias_current_node).getData()
+            assert not len(node.getValue().getShape()) == 0
+            assert node.getValue().size >= 10000
+        except:
+            bias_current_signal_exists = False
+    determine_time = True  if (exists_in_mdsplus and
+                               fiducial_a_signal_exists and
+                               bias_current_signal_exists) else False
+    existence = {'exists_in_mdsplus': exists_in_mdsplus,
+                 'fiducial_a_signal_exists': fiducial_a_signal_exists,
+                 'fiducial_b_signal_exists': fiducial_b_signal_exists,
+                 'bias_current_signal_exists': bias_current_signal_exists}
+    return (determine_time, existence)
 
 
 def determine_times_from_idl(shot,
@@ -55,64 +102,106 @@ def determine_times_from_idl(shot,
     r"""
     Run relative time script and return dictionary of ouputs.
     """
-    idl = pidly.IDL(idl_path)
-    idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period;')
-    phase_zero_time = float(idl.trig_time)*1e-3
-    phase_zero_index = int(idl.trig_index)
-    period = float(idl.period)*1e-3
-    idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period, current_rise=1;')
-    ramp_time = float(idl.trig_time)*1e-3
-    ramp_index = int(idl.trig_index)
-    idl.close()
-    times = {'phase_zero': phase_zero_time,
-             'phase_zero_index': phase_zero_index,
-             'period': period,
-             'ramp': ramp_time,
-             'ramp_index': ramp_index}
-    return times
+    success = True
+    times = {}
+    try:
+        idl = pidly.IDL(idl_path)
+        idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period;')
+        phase_zero_time = float(idl.trig_time)*1e-3
+        phase_zero_index = int(idl.trig_index)
+        period = float(idl.period)*1e-3
+        idl.close()
+        times.update({'phase_zero': phase_zero_time,
+                      'phase_zero_index': phase_zero_index,
+                      'period': period,
+                      'phase_reference_time_idl_code_succeeded': True})
+    except:
+        times.update({'phase_zero': None,
+                      'phase_zero_index': None,
+                      'period': None,
+                      'phase_reference_time_idl_code_succeeded': False})
+        success = False
+    try:
+        idl = pidly.IDL(idl_path)
+        idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period, current_rise=1;')
+        ramp_time = float(idl.trig_time)*1e-3
+        ramp_index = int(idl.trig_index)
+        idl.close()
+        times.update({'ramp': ramp_time,
+                      'ramp_index': ramp_index,
+                      'ramp_reference_time_idl_code_succeeded': True})
+    except:
+        times.update({'ramp': None,
+                      'ramp_index': None,
+                      'ramp_reference_time_idl_code_succeeded': False})
+        success = False
+    return times, success
 
 
-def store_times_in_sql(shot, times, database):
+def store_times_in_sql(shot, times, database, start=False):
     r"""
     Store times in sql database.
     """
     connection = sqlite3.connect(database)
     cursor = connection.cursor()
-    insert_statement = ("INSERT INTO Shots (shot, existence, " +
-                        "zero_phase_time, zero_phase_index, period, "
-                        "ramp_time, ramp_index) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?);")
-    cursor.execute(insert_statement, [shot, True, times['phase_zero'],
-                                      times['phase_zero_index'],
-                                      times['period'], times['ramp'],
-                                      times['ramp_index']])
+    if start:
+        insert_statement = ("INSERT INTO Shots (shot, existence, " +
+                            "zero_phase_time, zero_phase_index, period, "
+                            "ramp_time, ramp_index) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?);")
+        cursor.execute(insert_statement, [shot, True, times['phase_zero'],
+                       times['phase_zero_index'],
+                       times['period'], times['ramp'],
+                       times['ramp_index']])
+    else:
+        update_statement = ("UPDATE Shots SET zero_phase_time = :phase_zero, " +
+                            "zero_phase_index = :phase_zero_index, " +
+                            "period = :period, ramp_time = :ramp_time, " +
+                            "ramp_index = :ramp_index, " +
+                            "phase_reference_time_idl_code_succeeded = :phase_reference_time_idl_code_succeeded, " +
+                            "ramp_reference_time_idl_code_succeeded = :ramp_reference_time_idl_code_succeeded, " +
+                            "WHERE shot = :shot;")
+        cursor.execute(update_statement, {'shot': shot,
+                                          'phase_reference_time_idl_code_succeeded': times['phase_reference_time_idl_code_succeeded'],
+                                          'ramp_reference_time_idl_code_succeeded' : times['ramp_reference_time_idl_code_succeeded'],
+                                          'phase_zero': times['phase_zero'],
+                                          'phase_zero_index':
+                                              times['phase_zero_index'],
+                                          'period': times['period'],
+                                          'ramp_time': times['ramp'],
+                                          'ramp_index': times['ramp_index']})
     connection.commit()
     cursor.close()
     connection.close()
 
 
-def store_nonexistence_in_sql(shot, database):
+def store_existence_in_sql(shot, database, existence):
     r"""
     Store shot with existense set to False.
     """
     connection = sqlite3.connect(database)
     cursor = connection.cursor()
-    insert_statement = ("INSERT INTO Shots (shots, existence) VALUES +"
-                        "(?, ?);")
-    cursor.execute(insert_statement, [shot, False])
+    insert_statement = ("UPDATE Shots SET exists_in_mdsplus = :exists_in_mdsplus, " +
+                        "fiducial_a_signal_exists = :fiducial_a_signal_exists, " +
+                        "fiducial_b_signal_exists = :fiducial_b_signal_exists, " +
+                        "bias_current_signal_exists = :bias_current_signal_exists " +
+                        "WHERE shot = :shot;")
+    existence.update({'shot': shot})
+    cursor.execute(insert_statement, existence)
     connection.commit()
     cursor.close()
     connection.close()
 
 
-def retrieve_fiducial_signals(shot):
+def retrieve_fiducial_signals(shot, fiducial_a_node, fiducial_b_node,
+                              bias_current_node):
     r"""
     Read MDS+ tree nodes storing fiducial probes and return signals as dictionary.
     """
     rsx_tree = mds.Tree('rsx', shot)
-    fiducial_a_node = rsx_tree.getNode('\j_002_000')
-    fiducial_b_node = rsx_tree.getNode('\j_002_001')
-    bias_current_node = rsx_tree.getNode('\j_002_004')
+    fiducial_a_node = rsx_tree.getNode(fiducial_a_node)
+    fiducial_b_node = rsx_tree.getNode(fiducial_b_node)
+    bias_current_node = rsx_tree.getNode(bias_current_node)
     fiducial_a_data = fiducial_a_node.getData()
     fiducial_b_data = fiducial_b_node.getData()
     bias_current_data = bias_current_node.getData()
