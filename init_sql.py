@@ -16,14 +16,15 @@ cursor.execute("CREATE TABLE Shots(shot INTEGER, exists_in_shotlog BOOLEAN, " +
                "campaigns STRING, fiducial_a_node STRING, fiducial_b_node STRING, " +
                "bias_current_node STRING, " +
                "fiducial_a_signal_exists BOOLEAN, " +
-               "fiducial_b_signal_exists BOOLEAN, bias_current_signal_exists, " +
-               "bias_current_on BOOLEAN, " +
-               "bias_current_pre_crowbar_regular BOOLEAN, " +
-               "fiducial_ocillates BOOLEAN, " +
+               "fiducial_b_signal_exists BOOLEAN, bias_current_signal_exists BOOLEAN, " +
+               "bias_current_peak FLOAT, " +
+               "bias_current_crowbar_time FLOAT, bias_current_pre_ramp_std FLOAT, " +
+               "fiducial_pre_crowbar_gyration_spectral_density FLOAT, " +
+               "fiducial_gyration_spectral_density FLOAT, " +
                "phase_reference_time_idl_code_succeeded BOOLEAN, " +
                "ramp_reference_time_idl_code_succeeded BOOLEAN, " +
                "zero_phase_time REAL, zero_phase_index INTEGER, " +
-               "period FLOAT, ramp_time FLOAT, ramp_index INTEGER, " +
+               "period FLOAT, period_within_n_std INTEGER, ramp_time FLOAT, ramp_index INTEGER, " +
                "mach_insertion FLOAT, " +
                "mach_signals_exist BOOLEAN, mach_oscillates BOOLEAN, " +
                "mach_x_read FLOAT, mach_x FLOAT, mach_y_read FLOAT, mach_y FLOAT, mach_z FLOAT, " +
