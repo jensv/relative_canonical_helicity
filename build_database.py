@@ -12,6 +12,9 @@ sys.path.append('../../read_from_shotlog/')
 
 import sqlite3
 import numpy as np
+import MDSplus as mds
+import scipy.signal as signal
+import scipy.fftpack as fftpack
 from read_from_shotlog import read_and_store_shotlog
 from reference_time import determine_reference_times_all_shots
 
@@ -20,11 +23,24 @@ def build_database(database='shots.db', start=15253, end=17623):
     r"""
     Call functions that populate database.
     """
+    heuristics_params = {'pre_ramp_slice': slice(20000, 30000),
+                         'ramp_slice': slice(30000, None),
+                         'crowbar_slice': slice(5000, None),
+                         'peak_smooth_window': 10,
+                         'diff_smooth_window': 750,
+                         'offset': 5e-6,
+                         'pre_crowbar_sd_slice': slice(35500, 60000),
+                         'sd_slice': slice(35500, 42300),
+                         'mean_gyration_freq': 58e3,
+                         'std_gryation_freq': 8.4e3}
+
     read_and_store_shotlog(range(start, end), database=database, start=True)
     print "Classifying by campaign"
     add_campaigns(database)
     add_manual_entries(database)
     add_reference_times(database)
+    add_shot_quality(database)
+    add_shot_quality_heuristics(database, heuristics_params)
 
 
 def add_campaigns(database):
@@ -133,3 +149,131 @@ def add_manual_entries(database):
     connection.commit()
     cursor.close()
     connection.close()
+
+
+def add_shot_quality_heuristics(database, heuricts_params):
+    r"""
+    """
+    add_bias_current_heuristics(database, **heuristics_params)
+    add_fiducial_signal_heuristics(database, **heuristics_params)
+
+
+def add_bias_current_heuristics(database, pre_ramp_slice, ramp_slice,
+                                crowbar_slice, peak_smooth_window,
+                                diff_smooth_window, offset):
+    r"""
+    """
+    connection = sqlite3.connect(database)
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM Shots WHERE exists_in_shotlog = 1 AND " +
+                   "exists_in_mdsplus = 1 AND fiducial_a_signal_exists = 1 AND " +
+                   "bias_current_signal_exists = 1;")
+    rows = cursor.fetchall()
+    for row in rows:
+        print "Add bias current heuristics to shot %i" % shot
+        bias_current_node_name = row['bias_current_node']
+        tree = mds.Tree('rsx', row['shot'])
+        bias_current_node = tree.getNode(bias_current_node_name)
+        bias_current_data = bias_current_node.getData()
+        bias_current = np.asarray(bias_current_data.getValues())
+        bias_current_time =  np.asarray(bias_current_data.getDimensions()[0])*1e-3
+        std = get_bias_current_std(bias_current_time, bias_current,
+                                   pre_ramp_slice, ddof)
+        peak_current = get_bias_current_peak(bias_current_time, bias_current,
+                                             ramp_slice, peak_smooth_window)
+        crowbar_time = get_crowbar_time(bias_current_time, bias_current,
+                                        ramp_slice,
+                                        crowbar_slice, offset,
+                                        diff_smooth_window)
+        cursor.execute("UPDATE Shots SET bias_current_pre_ramp_std = :std, " +
+                       "bias_current_peak = :peak_current, " +
+                       "bias_current_crowbar_time = :crowbar_time " +
+                       "WHERE shot=:shot",
+                       {'shot': row['shot'], 'std': std, 'peak_current':
+                        peak_current, 'crowbar_time': crowbar_time})
+        connection.commit()
+    cursor.close()
+    connection.close()
+
+
+def get_bias_current_std(bias_current_time, bias_current, pre_ramp_slice,
+                         ddof=1):
+    r"""
+    """
+    return bias_current[pre_ramp_slice].std(ddof=ddof)
+
+
+def get_bias_current_peak(bias_current_time, bias_current, ramp_slice,
+                          window_length=10):
+    r"""
+    """
+    window = np.ones(window_length) / window_length
+    smoothed = np.convolve(window, bias_current[ramp_slice], mode='valid')
+    return smoothed.max()
+
+
+def get_crowbar_time(bias_current_time, bias_current, ramp_slice,
+                     crowbar_slice, offset, window_length=750):
+    r"""
+    """
+    window = np.ones(window_length) / window_length
+    smoothed = np.convolve(window, bias_current[ramp_slice], mode='same')
+    derivative = np.gradient(smoothed)[crowbar_slice] + offset
+    zero_crossing = np.where(np.diff(np.sign(derivative)))[0]
+    crowbar_time = bias_current_time[ramp_slice][crowbar_slice][zero_crossing]
+    return crowbar_time
+
+
+def add_fiducial_signal_heuristics(database, pre_crowbar_sd_slice, sd_slice,
+                                   std_gyration_freq, mean_gyration_freq):
+    r"""
+    """"
+    connection = sqlite3.connect(database)
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM Shots WHERE exists_in_shotlog = 1 AND " +
+                   "exists_in_mdsplus = 1 AND fiducial_a_signal_exists = 1 AND " +
+                   "bias_current_signal_exists = 1;")
+    rows = cursor.fetchall()
+    for row in rows:
+        print "Add fiducial signal heuristics to shot %i" % row['shot']
+        gyration_freq = 1. / row['period']
+        tree = mds.Tree('rsx', row['shot'])
+        fiducial_node_name = row['fiducial_a_node']
+        fiducial_node = tree.getNode(fiducial_node_name)
+        fiducial_data = fiducial_node.getData()
+        fiducial = np.asarray(fiducial_data.getValues())
+        fiducial_time =  np.asarray(fiducial_data.getDimensions()[0])*1e-3
+        pre_crowbar_gyration_sd = get_gyration_sd(fiducial_time, fiducial,
+                                                  sd_slice, gyration_freq,
+                                                  std_gyration_freq)
+        gyration_sd = get_gyration_sd(fiducial_time, fiducial,
+                                      pre_crowbar_sd_slice, gyration_freq,
+                                      std_gyration_freq)
+
+        n_std = np.ceil((gyration_freq - mean_gyration_freq) / std_gyration_freq)
+        cursor.execute("UPDATE Shots SET " +
+                       "fiducial_pre_crowbar_gyration_spectral_density = :pre_sd, " +
+                       "fiducial_gyration_spectral_density = :sd, " +
+                       "period_within_n_std = :n_std " +
+                       "WHERE shot = :shot;",
+                       {'shot': shot, 'pre_sd': pre_crowbar_gyration_sd,
+                        'sd': gyration_sd, 'n_std': n_std})
+        connection.commit()
+    cursor.close()
+    connection.close()
+
+
+def get_gyration_sd(fiducial_time, fiducial,
+                    sd_slice, gyration_freq, std_gyration_freq):
+    r"""
+    """
+    window = fiducial[pre_crowbar_slice]
+    fs = 1/(fiducial_time[1] - fiducial_time[0])
+    freqs, periodogram = signal.periodogram(window, fs)
+    range_of_interest = np.where(np.logical_and(gyration_freq - std_gyration_freq <= freqs,
+                                                freqs <= gyration_freq + std_gyration_freq))
+
+    sd = cumtrapz(periodogram[range_of_interest], freqs[range_of_interest])[0]
+    return sd
