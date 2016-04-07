@@ -7,7 +7,7 @@ vts : b_z249_000000.vts p_z249_000000.vts \
 	b_z416_000000.vts p_z416_000000.vts
 
 idl_bin=/Applications/exelis/idl85/bin/idl
-python_script=../../writing_to_vtk/source/idl_plane_to_structured_vtk.py
+python_script=../../writing_to_vtk/source/structured_vtk.py
 time_points=21
 kx=1
 ky=1
