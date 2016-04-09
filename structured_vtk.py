@@ -277,6 +277,8 @@ def build_vtk_from_idl(input_dict):
         temp_measurements = read_data(input_dict['temperature_path'])
         (x_min, x_max,
          y_min, y_max) = determine_sample_bounds([density_measurements])
+        density_measurements['a_out'] = density_measurements['a_out'] * 1e-20
+        print density_measurements
         for time_point in input_dict['time_points']:
             spline = fit_bivariate_splines(density_measurements, time_point,
                                            weigth=None, kx=kx, ky=ky,
@@ -306,6 +308,7 @@ def build_vtk_from_idl(input_dict):
             mesh = prepare_mesh(x_grid, y_grid, input_dict['z_position'])
             temperature = reshape_scalar(scalar_resampled)
 
+            density = density*1e20
             scalar = [density, temperature]
             symbols = [input_dict['symbol_density'],
                        input_dict['symbol_temperature']]
