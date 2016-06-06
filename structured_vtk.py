@@ -54,17 +54,34 @@ def resample_on_structutred_grid(data_dict,
 
 
 def fit_bivariate_splines(data_dict, time_point, weigth=None, kx=3, ky=3,
-                          s=None):
+                          s=None, knots=None, eps=1e-16,
+                          bbox=[None, None, None, None]):
     if len(np.asarray(data_dict['a_out']).shape) == 1:
-        spline = SmoothBivariateSpline(data_dict['x_out'],
-                                       data_dict['y_out'],
-                                       data_dict['a_out'],
-                                       kx=kx, ky=ky, s=s)
+        if knots is not None:
+            spline = LSQBivariateSpline(data_dict['x_out'],
+                                        data_dict['y_out'],
+                                        data_dict['a_out'],
+                                        knots[0], knots[1],
+                                        kx=kx, ky=ky, eps=eps, bbox=bbox)
+        else:
+            spline = SmoothBivariateSpline(data_dict['x_out'],
+                                           data_dict['y_out'],
+                                           data_dict['a_out'],
+                                           kx=kx, ky=ky, s=s, eps=eps,
+                                           bbox=bbox)
     else:
-        spline = SmoothBivariateSpline(data_dict['x_out'],
-                                       data_dict['y_out'],
-                                       data_dict['a_out'][time_point],
-                                       kx=kx, ky=ky, s=s)
+        if knots is not None:
+            spline = LSQBivariateSpline(data_dict['x_out'],
+                                        data_dict['y_out'],
+                                        data_dict['a_out'][time_point],
+                                        knots[0], knots[1],
+                                        kx=kx, ky=ky, eps=eps, bbox=bbox)
+        else:
+            spline = SmoothBivariateSpline(data_dict['x_out'],
+                                           data_dict['y_out'],
+                                           data_dict['a_out'][time_point],
+                                           kx=kx, ky=ky, s=s, eps=eps,
+                                           bbox=bbox)
     return spline
 
 
