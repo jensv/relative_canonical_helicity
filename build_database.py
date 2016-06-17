@@ -65,16 +65,18 @@ def assign_campaigns(shot):
     r"""
     """
     campaigns = []
-    if 15928 <= shot <= 16017:
-        campaigns.append('mach_line_campaign_1')
-    elif 16596 <= shot <= 16627:
+    if 15928 <= shot <= 15941:
         campaigns.append('mach_probe_point_campaign_1')
-    elif 16628 <= shot <= 16646:
+    if 15942 <= shot <= 16017:
+        campaigns.append('mach_probe_line_campaign_1')
+    elif 16596 <= shot <= 16627:
         campaigns.append('mach_probe_point_campaign_2')
-    elif 16647 <= shot <= 16669:
+    elif 16628 <= shot <= 16646:
         campaigns.append('mach_probe_point_campaign_3')
-    elif 16670 <= shot <= 16689:
+    elif 16647 <= shot <= 16669:
         campaigns.append('mach_probe_point_campaign_4')
+    elif 16670 <= shot <= 16689:
+        campaigns.append('mach_probe_point_campaign_5')
     elif 16690 <= shot <= 17343:
         campaigns.append('mach_probe_plane_campaign_1')
     elif 17344 <= shot <= 17622:
@@ -132,7 +134,9 @@ def add_manual_entries(database):
             manual_settings['mach_l_2_loops'] = 10
             manual_settings['mach_r_monitor_volts_per_amp'] = 1
             manual_settings['mach_l_monitor_volts_per_amp'] = 1
-            manual_settings['mach_l_2_monitor_volts_per_amp'] = 1
+            manual_settings['mach_l_2_monitor_volts_per_amp'] = 0.1
+        if shot == 15948:
+            manual_settings['mach_l_loops'] = 10
         if 16579 <= shot:
             manual_settings['mach_r_node'] = 'j_008_015'
             manual_settings['mach_l_node'] = 'j_008_014'
