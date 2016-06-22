@@ -42,6 +42,54 @@ def build_database(database='shots.db', start=15253, end=17623):
     add_manual_entries(database)
     add_reference_times(database)
     add_shot_quality_heuristics(database, heuristics_params)
+    add_mach_quality_heuristics(database)
+
+
+def add_mach_quality_heuristics(database):
+    r"""
+    Tries to read data from mach nodes of rsx MDSplus tree.
+    If opening of tree or reading from nodes errors returns False otherwise True.
+    """
+    connection = sqlite3.connect(database)
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM Shots WHERE exists_in_mdsplus=1 AND "
+                   "(campaigns = 'mach_probe_plane_campaign_1' OR "
+                   "campaigns = 'mach_probe_plane_campaign_2' OR "
+                   "campaigns = 'mach_probe_line_campaign_1' OR "
+                   "campaigns = 'mach_probe_point_campaign_1' OR "
+                   "campaigns = 'mach_probe_point_campaign_2' OR "
+                   "campaigns = 'mach_probe_point_campaign_3' OR "
+                   "campaigns = 'mach_probe_point_campaign_4' OR "
+                   "campaigns = 'mach_probe_point_campaign_5')")
+    rows = cursor.fetchall()
+
+    for row in rows:
+        mach_signals_exist = True
+        try:
+            rsx_tree = mds.Tree('rsx', row['shot'])
+        except:
+            print 'MDS+ error: %i does not exist' % row['shot']
+
+        try:
+            l_node = rsx_tree.getNode(row['mach_l_node']).getData()
+            assert not len(l_node.getValue().getShape()) == 0, str(row['shot']) + ' l_node_data length zero.'
+            assert l_node.getValue().size >= 10000, str(row['shot']) + ' l_node_data short.'
+
+            r_node = rsx_tree.getNode(row['mach_r_node']).getData()
+            assert not len(r_node.getValue().getShape()) == 0, str(row['shot']) + ' r_node_data length zero.'
+            assert r_node.getValue().size >= 10000, str(row['shot']) + ' r_node_data short.'
+        except:
+            mach_signals_exist = False
+
+        print 'updating' + str(row['shot']) + ' : ' +  str(mach_signals_exist)
+        cursor.execute('UPDATE Shots SET mach_signals_exist = :signals_exist '
+                       'WHERE shot = :shot',
+                       {'signals_exist': mach_signals_exist,
+                        'shot': row['shot']})
+    connection.commit()
+    cursor.close()
+    connection.close()
 
 
 def add_campaigns(database):
@@ -120,9 +168,9 @@ def add_manual_entries(database):
                            'fiducial_b_node': '\j_002_001',
                            'bias_current_node': '\j_002_004'}
         if 15928 <= shot <= 16017:
-            manual_settings['mach_r_node'] = 'j_008_011'
-            manual_settings['mach_l_node'] = 'j_008_010'
-            manual_settings['mach_l_2_node'] = 'j_002_003'
+            manual_settings['mach_r_node'] = '\j_008_011'
+            manual_settings['mach_l_node'] = '\j_008_010'
+            manual_settings['mach_l_2_node'] = '\j_002_003'
             manual_settings['mach_r_termination_ohm'] = 95e3
             manual_settings['mach_l_termination_ohm'] = 95e3
             manual_settings['mach_r_monitor_pearson_model'] = '4100'
@@ -138,8 +186,8 @@ def add_manual_entries(database):
         if shot == 15948:
             manual_settings['mach_l_loops'] = 10
         if 16579 <= shot:
-            manual_settings['mach_r_node'] = 'j_008_015'
-            manual_settings['mach_l_node'] = 'j_008_014'
+            manual_settings['mach_r_node'] = '\j_008_015'
+            manual_settings['mach_l_node'] = '\j_008_014'
             manual_settings['mach_r_termination_ohm'] = 95e3
             manual_settings['mach_l_termination_ohm'] = 95e3
             manual_settings['mach_r_monitor_pearson_model'] = '4100'
