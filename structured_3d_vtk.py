@@ -26,10 +26,10 @@ def read_idl(quantity, data_path='../../comprehensive_3d_plot/output/2016-04-07/
     Read idl files for all planes.
     """
     idl_ending = '.sav'
-    z249_file = data_path + quantity + '_z249' + data_ending
-    z302_file = data_path + quantity + '_z302' + data_ending
-    z357_file = data_path + quantity + '_z357' + data_ending
-    z416_file = data_path + quantity + '_z416' + data_ending
+    z249_file = data_path + quantity + '_z249' + idl_ending
+    z302_file = data_path + quantity + '_z302' + idl_ending
+    z357_file = data_path + quantity + '_z357' + idl_ending
+    z416_file = data_path + quantity + '_z416' + idl_ending
 
     z249_measurements = idl.readsav(z249_file)
     z302_measurements = idl.readsav(z302_file)
@@ -53,7 +53,7 @@ def read_points_from_measurement_dict(measurement_dict, time_point, z_planes):
     z_points = np.empty((0))
     values = np.empty((0))
     for z_plane in z_planes:
-        plane_measurements = measurements[z_plane]
+        plane_measurements = measurement_dict[z_plane]
         x_points = np.append(x_points, plane_measurements['x_out'])
         y_points = np.append(y_points, plane_measurements['y_out'])
         z_points = np.append(z_points, np.ones(plane_measurements['x_out'].size)*z_plane)
@@ -73,9 +73,14 @@ def bounded_grid(bounds, spatial_increment=0.003):
     (x_min, x_max), (y_min, y_max), (z_min, z_max) = bounds
 
     x_coord = np.linspace(x_min, x_max, np.ceil((x_max-x_min)/spatial_increment))
+    if x_coord.size == 0:
+        x_coord = np.asarray([x_min])
     y_coord = np.linspace(y_min, y_max, np.ceil((y_max-y_min)/spatial_increment))
+    if y_coord.size == 0:
+        y_coord = np.asarray([y_min])
     z_coord = np.linspace(z_min, z_max, np.ceil((z_max-z_min)/spatial_increment))
-
+    if z_coord.size == 0:
+        z_coord = np.asarray([z_min])
     sizes = map(np.size, [x_coord, y_coord, z_coord])
 
     mesh = np.meshgrid(x_coord, y_coord, z_coord, indexing='ij')
@@ -139,5 +144,5 @@ def prepare_scalar(scalar, sizes):
     Return scalar reshaped for vtk writer.
     """
     vtk_scalar = np.resize(scalar, sizes)
-    vtk_scalar = np.expand_dims(scalar, 0)
+    vtk_scalar = np.expand_dims(vtk_scalar, 0)
     return vtk_scalar
