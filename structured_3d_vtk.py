@@ -104,6 +104,9 @@ def interpolate_scalar(grid_points, scalar_points, scalar_values):
     r"""
     Linearly interpolate scalar measurements at grid points.
     """
+    #print 'grid' , grid_points
+    #print 'm points' , scalar_points
+    #print 'values' , scalar_values
     interpolated_data = griddata(scalar_points, scalar_values, grid_points)
     return interpolated_data
 
@@ -146,3 +149,145 @@ def prepare_scalar(scalar, sizes):
     vtk_scalar = np.resize(scalar, sizes)
     vtk_scalar = np.expand_dims(vtk_scalar, 0)
     return vtk_scalar
+
+
+def build_vtk_vector(direction_measurements, full_vtk_grid=None, indices=None,
+                     bounds=None, spatial_increment=None,
+                     z_planes=[0.249, 0.302, 0.357, 0.416], time_points=21):
+    r"""
+    Return interpolated vector on a vtk grid.
+    """
+    mode = ''
+    msg = 'Either set full_vtk_grid and indcies or bounds and increment not all 4.'
+    assert (((not full_vtk_grid == None and not indices == None) or
+             (not bounds == None and not spatial_increment == None)) and
+            not (not full_vtk_grid == None and not indices == None and
+                 not bounds == None and not spatial_increment == None )), msg
+    if not full_vtk_grid == None and not indices == None:
+        mode = 'sub_grid'
+    if not bounds == None and not spatial_increment == None:
+        mode = 'full_grid'
+
+    vtk_vectors = []
+    for time_point in xrange(time_points):
+        print 'time_point %i' % time_point
+        points = []
+        values = []
+        for measurements in direction_measurements:
+            (points_direction,
+             values_direction) = read_points_from_measurement_dict(measurements,
+                                                                   time_point,
+                                                                   z_planes)
+            points.append(points_direction)
+            values.append(values_direction)
+
+        if mode == 'full_grid':
+            grid_points, sizes = bounded_grid(bounds, spatial_increment)
+        elif mode == 'sub_grid':
+            grid_points, sizes = build_sub_grid_points(full_vtk_grid, indices)
+        interpolated_vector = interpolate_vector(grid_points, points, values)
+        interpolated_vector = add_vacuum_field(interpolated_vector)
+
+        assert np.sum(np.isnan(interpolated_vector[0])) == 0
+        assert np.sum(np.isnan(interpolated_vector[1])) == 0
+        assert np.sum(np.isnan(interpolated_vector[2])) == 0
+
+        vtk_grid = prepare_mesh(grid_points, sizes)
+        vtk_vector = prepare_vector(interpolated_vector, sizes)
+
+        vtk_vectors.append(vtk_vector)
+    vtk_vectors = np.asarray(vtk_vectors)
+    return vtk_grid, vtk_vectors
+
+
+def build_vtk_scalar(measurements, full_vtk_grid=None, indices=None,
+                     bounds=None, spatial_increment=None,
+                     z_planes=[0.249, 0.302, 0.357, 0.416], time_points=21):
+    r"""
+    Return interpolated scalar on a vtk grid.
+    """
+    mode = ''
+    msg = 'Either set full_vtk_grid and indcies or bounds and increment not all 4.'
+    assert (((not full_vtk_grid == None and not indices == None) or
+             (not bounds == None and not spatial_increment == None)) and
+            not (not full_vtk_grid == None and not indices == None and
+                 not bounds == None and not spatial_increment == None )), msg
+    if not full_vtk_grid == None and not indices == None:
+        mode = 'sub_grid'
+    if not bounds == None and not spatial_increment == None:
+        mode = 'full_grid'
+
+
+    vtk_scalars = []
+    for time_point in xrange(time_points):
+        print 'time_point %i' % time_point
+        (scalar_points,
+         scalar_values) = read_points_from_measurement_dict(measurements,
+                                                            time_point,
+                                                            z_planes)
+        to_remove = []
+        for i, value in enumerate(scalar_values):
+            if np.isnan(value):
+                to_remove.append(i)
+        scalar_values = np.delete(scalar_values, to_remove)
+        scalar_points = np.delete(scalar_points, to_remove, 0)
+
+        if mode == 'full_grid':
+            grid_points, sizes = bounded_grid(bounds, spatial_increment)
+        elif mode == 'sub_grid':
+            grid_points, sizes = build_sub_grid_points(full_vtk_grid, indices)
+
+        if len(z_planes) == 1:
+                grid_points = np.delete(grid_points, 2, 1)
+                scalar_points = np.delete(scalar_points, 2, 1)
+        interpolated_scalar = interpolate_scalar(grid_points, scalar_points,
+                                                 scalar_values)
+
+        assert np.sum(np.isnan(interpolated_scalar)) == 0
+
+        if len(z_planes) == 1:
+            grid_points = np.insert(grid_points, 2,
+                                    np.ones((grid_points.shape[0]))*z_planes[0],
+                                    axis=1)
+
+        vtk_grid = prepare_mesh(grid_points, sizes)
+        vtk_scalar = prepare_scalar(interpolated_scalar, sizes)
+
+        vtk_scalars.append(vtk_scalar)
+    vtk_scalars = np.asarray(vtk_scalars)
+    return vtk_grid, vtk_scalars
+
+
+def build_sub_grid_indices(full_vtk_grid, bounds):
+    r"""
+    """
+    indices = np.argwhere(np.logical_and.reduce((full_vtk_grid[0] >= bounds[0][0],
+                                                  full_vtk_grid[0] <= bounds[0][1],
+                                                  full_vtk_grid[1] >= bounds[1][0],
+                                                  full_vtk_grid[1] <= bounds[1][1],
+                                                  full_vtk_grid[2] >= bounds[2][0],
+                                                  full_vtk_grid[2] <= bounds[2][1])))
+    return indices
+
+
+def build_vtk_sub_indices(indices):
+    sizes = (np.unique(indices[:, 0]).size,
+             np.unique(indices[:, 1]).size,
+             np.unique(indices[:, 2]).size)
+    indicies = np.swapaxes(indices, 0, 1)
+    sub_grid_indices = [np.resize(indicies[i], sizes) for i in xrange(3)]
+    return sub_grid_indices
+
+
+def build_sub_grid_points(full_vtk_grid, indices):
+    r"""
+    """
+    points = [full_vtk_grid[i][indices[:,0],
+                               indices[:,1],
+                               indices[:,2]] for i in range(3)]
+    points = np.asarray(points)
+    points = np.swapaxes(points, 0, 1)
+    sizes = (np.unique(indices[:, 0]).size,
+             np.unique(indices[:, 1]).size,
+             np.unique(indices[:, 2]).size)
+    return points, sizes
