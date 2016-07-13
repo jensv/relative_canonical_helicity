@@ -66,6 +66,43 @@ def read_points_from_measurement_dict(measurement_dict, time_point, z_planes):
     return points, values
 
 
+def average_duplicate_points(data_dict):
+    r"""
+    Find duplicate points, average them and record standard deviation.
+    """
+    data_dict['x_out'] = data_dict['x_out'].astype('float64')
+    data_dict['y_out'] = data_dict['y_out'].astype('float64')
+    data_dict['a_out'] = data_dict['a_out'].astype('float64')
+    time_points = data_dict['a_out'].shape[0]
+    data = {}
+    for idx in xrange(data_dict['x_out'].size):
+        location = (data_dict['x_out'][idx], data_dict['y_out'][idx])
+        if location in data.keys():
+            data[location] = np.column_stack((data[location], data_dict['a_out'][:, idx]))
+        else:
+            data[location] = data_dict['a_out'][:, idx]
+
+    unique_data_dict = {'x_out': [],
+                        'y_out': [],
+                        'a_out': [],
+                        'std': []}
+    for location in data.keys():
+        if data[location][0].size > 1:
+            unique_data_dict['std'].append(data[location].std(axis=1, ddof=1))
+            unique_data_dict['a_out'].append(data[location].mean(axis=1))
+        else:
+            unique_data_dict['std'].append(np.zeros(time_points))
+            unique_data_dict['a_out'].append(data[location])
+        unique_data_dict['x_out'].append(location[0])
+        unique_data_dict['y_out'].append(location[1])
+
+    unique_data_dict['x_out'] = np.asarray(unique_data_dict['x_out'])
+    unique_data_dict['y_out'] = np.asarray(unique_data_dict['y_out'])
+    unique_data_dict['a_out'] = np.hsplit(np.asarray(unique_data_dict['a_out']), time_points)
+    unique_data_dict['delays'] = data_dict['delays']
+    return unique_data_dict
+
+
 def bounded_grid(bounds, spatial_increment=0.003):
     r"""
     Return rectinlinear grid bounded by bounds with spatial_increment.
@@ -90,13 +127,18 @@ def bounded_grid(bounds, spatial_increment=0.003):
     return grid_points, sizes
 
 
-def interpolate_vector(grid_points, vector_points, vector_values):
+def interpolate_vector(grid_points, vector_points, vector_values,
+                       method='linear'):
     r"""
     Linearly interpolate vector measurements at grid points.
     """
-    interpolated_data_x = griddata(vector_points[0], vector_values[0], grid_points)
-    interpolated_data_y = griddata(vector_points[1], vector_values[1], grid_points)
-    interpolated_data_z = griddata(vector_points[2], vector_values[2], grid_points)
+    interpolated_data_x = griddata(vector_points[0], vector_values[0],
+                                   grid_points, method=method)
+
+    interpolated_data_y = griddata(vector_points[1], vector_values[1],
+                                   grid_points, method=method)
+    interpolated_data_z = griddata(vector_points[2], vector_values[2],
+                                   grid_points, method=method)
     return [interpolated_data_x, interpolated_data_y, interpolated_data_z]
 
 
@@ -271,6 +313,8 @@ def build_sub_grid_indices(full_vtk_grid, bounds):
 
 
 def build_vtk_sub_indices(indices):
+    r"""
+    """
     sizes = (np.unique(indices[:, 0]).size,
              np.unique(indices[:, 1]).size,
              np.unique(indices[:, 2]).size)
