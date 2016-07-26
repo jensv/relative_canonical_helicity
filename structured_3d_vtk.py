@@ -134,7 +134,6 @@ def interpolate_vector(grid_points, vector_points, vector_values,
     """
     interpolated_data_x = griddata(vector_points[0], vector_values[0],
                                    grid_points, method=method)
-
     interpolated_data_y = griddata(vector_points[1], vector_values[1],
                                    grid_points, method=method)
     interpolated_data_z = griddata(vector_points[2], vector_values[2],
