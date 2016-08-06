@@ -59,7 +59,6 @@ def read_points_from_measurement_dict(measurement_dict, time_point, z_planes):
         z_points = np.append(z_points, np.ones(plane_measurements['x_out'].size)*z_plane)
         values = np.append(values, plane_measurements['a_out'][time_point])
 
-
     points = [x_points, y_points, z_points]
     points = np.asarray(points)
     points = np.swapaxes(points, 0, 1)
@@ -101,6 +100,34 @@ def average_duplicate_points(data_dict):
     unique_data_dict['a_out'] = np.hsplit(np.asarray(unique_data_dict['a_out']), time_points)
     unique_data_dict['delays'] = data_dict['delays']
     return unique_data_dict
+
+
+def remove_points_out_of_bounds(data_dict, lower, upper, planes):
+    r"""
+    Find points out of bounds and remove them.
+    """
+    new_data_dict = {}
+    for plane in planes:
+        new_data_dict[plane] = {'x_out': [],
+                                'y_out': [],
+                                'a_out': []}
+        to_remove = []
+        for time in xrange(len(data_dict[plane]['a_out'])):
+            indexes = (np.where(np.logical_or(data_dict[plane]['a_out'][time] < lower,
+                                              data_dict[plane]['a_out'][time] > upper))[0])
+            if indexes.size > 0:
+                to_remove.append(indexes)
+        if len(to_remove) > 0:
+            to_remove = np.concatenate(to_remove)
+        to_remove = np.unique(to_remove)
+        new_data_dict[plane]['x_out'] = np.delete(data_dict[plane]['x_out'], to_remove)
+        new_data_dict[plane]['y_out'] = np.delete(data_dict[plane]['y_out'], to_remove)
+        for time in xrange(len(data_dict[plane]['a_out'])):
+            new_data_dict[plane]['a_out'].append(np.delete(data_dict[plane]['a_out'][time],
+                                                 to_remove))
+        new_data_dict[plane]['a_out'] = np.asarray(new_data_dict[plane]['a_out'])
+        new_data_dict[plane]['delays'] = data_dict[plane]['delays']
+    return new_data_dict
 
 
 def bounded_grid(bounds, spatial_increment=0.003):
