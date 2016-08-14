@@ -21,7 +21,7 @@ sys.path.append('/Users/vonderlinden2/rsx_analysis/time_alignment/source')
 import absolute_times as at
 
 
-def read_idl(quantity, data_path='../../comprehensive_3d_plot/output/2016-04-07/'):
+def read_idl(quantity, data_path='../../comprehensive_3d_plot/output/2016-08-12/'):
     r"""
     Read idl files for all planes.
     """
@@ -98,6 +98,7 @@ def average_duplicate_points(data_dict):
     unique_data_dict['x_out'] = np.asarray(unique_data_dict['x_out'])
     unique_data_dict['y_out'] = np.asarray(unique_data_dict['y_out'])
     unique_data_dict['a_out'] = np.hsplit(np.asarray(unique_data_dict['a_out']), time_points)
+    unique_data_dict['std'] = np.hsplit(np.asarray(unique_data_dict['std']), time_points)
     unique_data_dict['delays'] = data_dict['delays']
     return unique_data_dict
 
