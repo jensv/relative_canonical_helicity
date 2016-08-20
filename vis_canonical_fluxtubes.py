@@ -87,7 +87,7 @@ def define_expressions(visit, alpha=8.1e5):
                                  "dot(Omega_i, {0, 0, 1})")
 
 
-def launch_points(visit, center, plane=0.249, num_inner=80, num_outer=60):
+def launch_points(center, plane=0.249, num_inner=80, num_outer=60):
     r"""
     Calculate points on a circle outline for a given center point.
     """
@@ -222,3 +222,28 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
     visit.SetPlotOptions(StreamlineAtts_backward)
 
     return StreamlineAtts_forward, StreamlineAtts_backward
+
+def set_default_view(visit):
+    r"""
+    Set default view for viewing fluxtubes.
+    If view needs to be modified it is best to align visit with gui and save
+    parameters from visit.GetView3D().
+    """
+    view = visit.GetView3D()
+    view.SetViewNormal((-0.731293, 0.40847, 0.546227))
+    view.SetFocus((0.00202222, 0.000976744, 0.331997))
+    view.SetViewUp((0.322268, 0.91274, -0.251095))
+    view.SetViewAngle(30)
+    view.SetParallelScale(0.088383)
+    view.SetNearPlane(-0.176766)
+    view.SetImagePan((0, 0))
+    view.SetImageZoom(1)
+    view.SetPerspective(1)
+    view.SetEyeAngle(2)
+    view.SetCenterOfRotationSet(0)
+    view.SetCenterOfRotation((0.00202222, 0.000976744, 0.331997))
+    view.SetAxis3DScaleFlag(0)
+    view.SetAxis3DScales((1,1,1))
+    view.SetShear((0,0,1))
+    view.SetWindowValid(0)
+    visit.SetView3D(view)
