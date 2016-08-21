@@ -10,6 +10,7 @@ from datetime import datetime
 import numpy as np
 import os
 from scipy.constants import elementary_charge, proton_mass
+from glob import glob
 
 tan = (209, 178, 111, 255)
 olive = (110, 117, 14, 255)
@@ -116,7 +117,8 @@ def launch_points(center, plane=0.249, num_inner=80, num_outer=60):
     return points_outer, points_inner
 
 
-def setup_current_pseudocolor(visit, colortable="Greens"):
+def setup_current_pseudocolor(visit, colortable="Greens", max_val=None,
+                              min_val=None):
     r"""
     Setup pseudocolor current plot.
     """
@@ -125,6 +127,14 @@ def setup_current_pseudocolor(visit, colortable="Greens"):
     PseudocolorAtts.scaling = PseudocolorAtts.Linear
     PseudocolorAtts.limitsMode = PseudocolorAtts.OriginalData
     PseudocolorAtts.colorTableName = colortable
+
+    if max_val:
+        PseudocolorAtts.maxFlag = 1
+        PseudocolorAtts.max = max_val
+    if min_val:
+        PseudocolorAtts.minFlag = 1
+        PseudocolorAtts.min = min_val
+
     visit.SetPlotOptions(PseudocolorAtts)
     visit.AddOperator("Slice", 0)
     SliceAtts = visit.SliceAttributes()
@@ -133,6 +143,7 @@ def setup_current_pseudocolor(visit, colortable="Greens"):
     SliceAtts.axisType = SliceAtts.ZAxis
     SliceAtts.project2d = 0
     visit.SetOperatorOptions(SliceAtts, 0)
+
     return PseudocolorAtts, SliceAtts
 
 
@@ -232,6 +243,8 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
 
 def setup_field_line(visit, center=(0.01, 0.01, 0.249),
                      outer_radius=0.01):
+    r"""
+    """
     visit.AddPlot("Streamline", "B", 1, 0)
     StreamlineAtts_line = visit.StreamlineAttributes()
     StreamlineAtts_line.sourceType = StreamlineAtts_line.SpecifiedPoint
@@ -290,3 +303,26 @@ def set_default_view(visit):
     view.SetShear((0,0,1))
     view.SetWindowValid(0)
     visit.SetView3D(view)
+
+
+def determine_j_mag_extrema(database_path, plane_num=0):
+    r"""
+    """
+    numpy_archives =  glob(database_path + '*.npz')
+    data = np.load(numpy_archives[0])
+    j_x = data['j_x'][:, :, plane_num]
+    j_y = data['j_y'][:, :, plane_num]
+    j_z = data['j_z'][:, :, plane_num]
+    j_mag = np.sqrt(j_x**2. + j_y**2. + j_z**2.)
+    j_mag_max = np.nanmax(j_mag)
+    j_mag_min = np.nanmin(j_mag)
+    for archive in numpy_archives[1:]:
+        data = np.load(archive)
+        j_x = data['j_x'][:, :, plane_num]
+        j_y = data['j_y'][:, :, plane_num]
+        j_z = data['j_z'][:, :, plane_num]
+        j_mag = np.sqrt(j_x**2. + j_y**2. + j_z**2.)
+        j_mag_max = np.nanmax(j_mag) if np.nanmax(j_mag) > j_mag_max else j_mag_max
+        j_mag_min = np.nanmin(j_mag) if np.nanmin(j_mag) < j_mag_min else j_mag_min
+    return j_mag_max, j_mag_min
+
