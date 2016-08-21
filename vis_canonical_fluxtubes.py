@@ -149,6 +149,7 @@ def setup_massless_electron_canonical_flux_tubes(visit, points_outer,
     StreamlineAtts_outer.coloringMethod = StreamlineAtts_outer.Solid
     StreamlineAtts_outer.colorTableName = "Default"
     StreamlineAtts_outer.singleColor = (255, 0, 0, 255)
+    StreamlineAtts_outer.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_outer)
 
     visit.AddPlot("Streamline", "B", 1, 0)
@@ -158,6 +159,7 @@ def setup_massless_electron_canonical_flux_tubes(visit, points_outer,
     StreamlineAtts_inner.coloringMethod = StreamlineAtts_inner.Solid
     StreamlineAtts_inner.colorTableName = "Default"
     StreamlineAtts_inner.singleColor = (190, 64, 0, 255)
+    StreamlineAtts_inner.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_inner)
 
     return StreamlineAtts_outer, StreamlineAtts_inner
@@ -178,6 +180,7 @@ def setup_inner_outer_ion_canonical_flux_tubes(visit, points_outer,
     StreamlineAtts_outer.coloringMethod = StreamlineAtts_outer.Solid
     StreamlineAtts_outer.colorTableName = "Default"
     StreamlineAtts_outer.singleColor = outer_color
+    StreamlineAtts_outer.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_outer)
 
     visit.AddPlot("Streamline", "Omega_i", 1, 0)
@@ -187,6 +190,7 @@ def setup_inner_outer_ion_canonical_flux_tubes(visit, points_outer,
     StreamlineAtts_inner.coloringMethod = StreamlineAtts_inner.Solid
     StreamlineAtts_inner.colorTableName = "Default"
     StreamlineAtts_inner.singleColor = inner_color
+    StreamlineAtts_inner.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_inner)
 
     return StreamlineAtts_outer, StreamlineAtts_inner
@@ -209,6 +213,7 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
     StreamlineAtts_forward.colorTableName = "Default"
     StreamlineAtts_forward.singleColor = forward_color
     StreamlineAtts_forward.integrationDirection = StreamlineAtts_forward.Forward
+    StreamlineAtts_forward.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_forward)
 
     visit.AddPlot("Streamline", "Omega_i", 1, 0)
@@ -219,9 +224,47 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
     StreamlineAtts_backward.colorTableName = "Default"
     StreamlineAtts_backward.singleColor = backward_color
     StreamlineAtts_backward.integrationDirection = StreamlineAtts_backward.Backward
+    StreamlineAtts_backward.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_backward)
 
     return StreamlineAtts_forward, StreamlineAtts_backward
+
+
+def setup_field_line(visit, center=(0.01, 0.01, 0.249),
+                     outer_radius=0.01):
+    visit.AddPlot("Streamline", "B", 1, 0)
+    StreamlineAtts_line = visit.StreamlineAttributes()
+    StreamlineAtts_line.sourceType = StreamlineAtts_line.SpecifiedPoint
+    StreamlineAtts_line.pointSource = (center[0], center[1] + outer_radius, center[2])
+    StreamlineAtts_line.coloringMethod = StreamlineAtts_line.Solid
+    StreamlineAtts_line.singleColor = (255, 255, 153, 255)
+    StreamlineAtts_line.legendFlag = 0
+    StreamlineAtts_line.showSeeds = 0
+    visit.SetPlotOptions(StreamlineAtts_line)
+    return StreamlineAtts_line
+
+
+def setup_annotations(visit, time_scale=1):
+    r"""
+    """
+    AnnotationAtts = visit.AnnotationAttributes()
+    AnnotationAtts.axes3D.autoSetScaling = 0
+    AnnotationAtts.axes3D.xAxis.title.visible = 0
+    AnnotationAtts.axes3D.yAxis.title.visible = 0
+    AnnotationAtts.axes3D.zAxis.title.visible = 0
+    AnnotationAtts.axes3D.xAxis.label.font.scale = 3
+    AnnotationAtts.axes3D.xAxis.label.scaling = -2
+    AnnotationAtts.axes3D.yAxis.label.font.scale = 3
+    AnnotationAtts.axes3D.yAxis.label.scaling = -2
+    AnnotationAtts.axes3D.zAxis.label.font.scale = 3
+    AnnotationAtts.axes3D.zAxis.label.scaling = -2
+    AnnotationAtts.userInfoFlag = 0
+    AnnotationAtts.databaseInfoFlag = 0
+    AnnotationAtts.databaseInfoTimeScale = time_scale
+    AnnotationAtts.databaseInfoTimeOffset = 0
+    visit.SetAnnotationAttributes(AnnotationAtts)
+    return AnnotationAtts
+
 
 def set_default_view(visit):
     r"""
