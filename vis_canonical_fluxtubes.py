@@ -70,7 +70,7 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineScalarExpression("u_i_para_scalar", "dot(u_i, {0, 0, 1})")
 
     visit.DefineVectorExpression("omega_i", "omega_i_term1 + "
-                                 "omega_i_term2 * %1.2e" % alpha)
+                                 "omega_i_term2")
     visit.DefineVectorExpression("omega_i_perp", "{dot(omega_i, {1, 0, 0}), "
                                  "dot(omega_i, {0, 1, 0}), 0}")
     visit.DefineVectorExpression("omega_i_para", "{0, 0, dot(omega_i, "
