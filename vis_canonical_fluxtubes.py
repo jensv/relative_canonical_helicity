@@ -1,3 +1,4 @@
+#! /Users/vonderlinden2/anaconda/bin/python
 # -*- coding: utf-8 -*-
 """
 Created on Fri Aug 19 14:38:10 2016
@@ -11,6 +12,9 @@ import numpy as np
 import os
 from scipy.constants import elementary_charge, proton_mass
 from glob import glob
+import sys
+import visit
+import argparse
 
 tan = (209, 178, 111, 255)
 olive = (110, 117, 14, 255)
@@ -244,6 +248,7 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
 def setup_field_line(visit, center=(0.01, 0.01, 0.249),
                      outer_radius=0.01):
     r"""
+    Setup single field line plot to better see twistedness.
     """
     visit.AddPlot("Streamline", "B", 1, 0)
     StreamlineAtts_line = visit.StreamlineAttributes()
@@ -259,6 +264,8 @@ def setup_field_line(visit, center=(0.01, 0.01, 0.249),
 
 def setup_annotations(visit, time_scale=1):
     r"""
+    Setup Annotations: scale tick font size, label font size,
+    hide unecessary text.
     """
     AnnotationAtts = visit.AnnotationAttributes()
     AnnotationAtts.axes3D.autoSetScaling = 0
@@ -299,14 +306,16 @@ def set_default_view(visit):
     view.SetCenterOfRotationSet(0)
     view.SetCenterOfRotation((0.00202222, 0.000976744, 0.331997))
     view.SetAxis3DScaleFlag(0)
-    view.SetAxis3DScales((1,1,1))
-    view.SetShear((0,0,1))
+    view.SetAxis3DScales((1, 1, 1))
+    view.SetShear((0, 0, 1))
     view.SetWindowValid(0)
     visit.SetView3D(view)
 
 
 def determine_j_mag_extrema(database_path, plane_num=0):
     r"""
+    Determine extrema over time of current across all shots.
+    Can be sued to set min and max values for colormaps.
     """
     numpy_archives =  glob(database_path + '*.npz')
     data = np.load(numpy_archives[0])
@@ -326,3 +335,104 @@ def determine_j_mag_extrema(database_path, plane_num=0):
         j_mag_min = np.nanmin(j_mag) if np.nanmin(j_mag) < j_mag_min else j_mag_min
     return j_mag_max, j_mag_min
 
+
+def set_save_settings(visit):
+    r"""
+    Set and return save_atts.
+    """
+    save_atts = visit.SaveWindowAttributes()
+    save_atts.format = save_atts.PNG
+    save_atts.height = 1080
+    save_atts.width = 1920
+    save_atts.family = 0
+    visit.SetSaveWindowAttributes(save_atts)
+    return save_atts
+
+def main():
+    r"""
+    """
+    args = parse_args()
+    database_prefix = args.database_prefix + args.database_date
+    visit.Launch()
+    today = str(date.today())
+    out_dir = '../output/' + today
+    try:
+       os.makedirs(out_dir)
+    except:
+        pass
+
+    output_path = out_dir + '/' + args.output_prefix
+    define_expressions(visit, args.alpha_constant)
+    visit.OpenDatabase(database_prefix + args.database_postfix)
+    field_nulls = np.loadtxt(args.field_nulls)
+    PseudocolorAtts, SliceAtts = setup_current_pseudocolor(visit, max_val=args.current_max, min_val=args.current_min)
+    points_outer, points_inner = launch_points(field_nulls[0])
+    AnnotationAtts = setup_annotations(visit, time_scale=args.time_scale)
+
+    if args.electron:
+        stream_line_func = setup_massless_electron_canonical_flux_tubes
+    elif args.ion:
+        stream_line_func = setup_inner_outer_ion_canonical_flux_tubes
+    else:
+        stream_line_func = setup_forward_backward_ion_canonical_flux_tubes
+        points_outer = points_inner
+
+
+    (StreamlineAtts_flux_1,
+     StreamlineAtts_flux_2) = stream_line_func(visit, points_outer, points_inner)
+
+    set_default_view(visit)
+    visit.DrawPlots()
+    save_atts = set_save_settings(visit)
+    ending = '.png'
+
+    for time_point in xrange(args.start_time_point, args.end_time_point):
+        print time_point
+        save_atts.fileName = output_path + str(time_point).zfill(4) + ending
+        visit.SetSaveWindowAttributes(save_atts)
+
+        points_outer, points_inner = launch_points(field_nulls[time_point])
+
+        if args.ion_forward_backward:
+            points_outer = points_inner
+
+        visit.SetActivePlots(1)
+        StreamlineAtts_flux_1.SetPointList(points_outer)
+        visit.SetPlotOptions(StreamlineAtts_flux_1)
+
+        visit.SetActivePlots(2)
+        StreamlineAtts_flux_2.SetPointList(points_inner)
+        visit.SetPlotOptions(StreamlineAtts_flux_2)
+
+        visit.SetTimeSliderState(time_point)
+
+        name = visit.SaveWindow()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate time step plots of canonical flux tubes.")
+    parser.add_argument('--database_prefix', help='path to visit database i.e. vtk files',
+                        default='/Users/vonderlinden2/rsx_analysis/writing_to_vtk/output/')
+    parser.add_argument('--database_postfix', help='path to visit database i.e. vtk files',
+                        default='/Bdot_triple_probe_quantities*.vtk database')
+    parser.add_argument('database_date', help='date of data run YYYY-MM-DD-mm-ss')
+    parser.add_argument('--output_prefix', help='output_file_prefix',
+                        default='electron_canonical_flux_tubes_')
+    parser.add_argument('--current_min', help='minimum for current color map', default=0.0)
+    parser.add_argument('--current_max', help='maximum for current color map', default=5.1e5)
+    parser.add_argument('--start_time_point', help='time point of first output frame', default=0)
+    parser.add_argument('--end_time_point', help='time point of last output frame', default=229)
+    parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
+                        default='/Users/vonderlinden2/rsx_analysis/centroid_fitting/output/2016-08-12/field_nulls.txt')
+    parser.add_argument('--time_scale', help='time scale of time steps', default=0.068)
+    parser.add_argument('--alpha_constant', help='value of spatially constant alpha', type=int, default=8.1e5)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--electron', help='plot canonical electron flux tubes', action='store_true', default=True)
+    group.add_argument('--ion', help='plot canonical ion flux tubes', action='store_true', default=False)
+    group.add_argument('--ion_forward_backward', help='plot canonical ion flux tubes', action='store_true', default=False)
+    args = parser.parse_args()
+    return args
+
+
+if __name__ == '__main__':
+    main() 
