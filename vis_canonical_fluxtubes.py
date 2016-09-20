@@ -369,12 +369,12 @@ def main():
     points_outer, points_inner = launch_points(field_nulls[0])
     AnnotationAtts = setup_annotations(visit, time_scale=args.time_scale)
 
-    if args.electron:
-        stream_line_func = setup_massless_electron_canonical_flux_tubes
+    if args.ion_forward_backward:
+        stream_line_func = setup_forward_backward_ion_canonical_flux_tubes
     elif args.ion:
         stream_line_func = setup_inner_outer_ion_canonical_flux_tubes
     else:
-        stream_line_func = setup_forward_backward_ion_canonical_flux_tubes
+        stream_line_func = setup_massless_electron_canonical_flux_tubes
         points_outer = points_inner
 
 
@@ -432,7 +432,6 @@ def parse_args():
     group.add_argument('--ion_forward_backward', help='plot canonical ion flux tubes', action='store_true', default=False)
     args = parser.parse_args()
     return args
-
 
 if __name__ == '__main__':
     main() 
