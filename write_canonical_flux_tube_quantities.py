@@ -14,6 +14,7 @@ from scipy.constants import elementary_charge as q_e
 from scipy.constants import proton_mass as m_i
 from astropy.convolution import convolve, convolve_fft
 from scipy.signal import fftconvolve
+from scipy.interpolate import SmoothBivariateSpline
 
 from datetime import date
 from datetime import datetime
@@ -31,7 +32,6 @@ import read_from_sql
 
 def main(args):
     r"""
-
     """
     now = datetime.now().strftime("%Y-%m-%d-%H-%M")
     out_dir = '../output/' + now
@@ -53,7 +53,7 @@ def main(args):
                                                            *args.n_extent,
                                                            bounds=args.n_bounds)
 
-    mach_y_all_planes, mach_z_all_planes = prepare_mach_probe_data(args) 
+    mach_y_all_planes, mach_z_all_planes = prepare_mach_probe_data(args)
     bx_triangulation, bx_interpolators = give_delaunay_and_interpolator(bx_all_planes)
     by_triangulation, by_interpolators = give_delaunay_and_interpolator(by_all_planes)
     bz_triangulation, bz_interpolators = give_delaunay_and_interpolator(bz_all_planes)
@@ -103,7 +103,16 @@ def main(args):
                       'w_i_term2_x', 'w_i_term2_y', 'w_i_term2_z',
                       'u_i_term1_x_constant_density', 'u_i_term1_y_constant_density', 'u_i_term1_z_constant_density',
                       'w_i_term1_x_constant_density', 'w_i_term1_y_constant_density', 'w_i_term1_z_constant_density',
-                      'ones']
+                      'ones',
+                      'u_e_x_fitted_alpha_z03', 'u_e_y_fitted_alpha_z03', 'u_e_z_fitted_alpha_z03',
+                      'w_i_term2_x_fitted_alpha_z03', 'w_i_term2_y_fitted_alpha_z03', 'w_i_term2_z_fitted_alpha_z03',
+                      'u_e_x_fitted_alpha_z04', 'u_e_y_fitted_alpha_z04', 'u_e_z_fitted_alpha_z04',
+                      'w_i_term2_x_fitted_alpha_z04', 'w_i_term2_y_fitted_alpha_z04', 'w_i_term2_z_fitted_alpha_z04',
+                      'u_e_x_fitted_alpha_both_planes', 'u_e_y_fitted_alpha_both_planes', 'u_e_z_fitted_alpha_both_planes',
+                      'w_i_term2_x_fitted_alpha_both_planes', 'w_i_term2_y_fitted_alpha_both_planes', 'w_i_term2_z_fitted_alpha_both_planes',
+                      'alpha_fitted_z03',
+                      'alpha_fitted_z04',
+                      'alpha_fitted_both_planes']
 
     for time_point in xrange(len(bx_interpolators)):
         print time_point
@@ -147,18 +156,103 @@ def main(args):
 
         ion_velocity_term_1 = calc_ion_velocity_term_1(current, density, q_e)
         ion_velocity_term_1_constant_density = calc_ion_velocity_term_1(current, density_constant, q_e)
+
+
+        mach_y_interpolator = mach_y_interpolators[time_point]
+        mach_z_interpolator = mach_z_interpolators[time_point]
+
+        mach_y = scalar_on_mesh(mach_y_interpolator, mesh_wo_edges[:2])
+        mach_z = scalar_on_mesh(mach_z_interpolator, mesh_wo_edges)
+        te = scalar_on_mesh(te_interpolator, mesh_wo_edges)
+
+        u_i_y = np.sqrt(te*q_e/m_i)*mach_y
+        u_i_z = np.sqrt(te*q_e/m_i)*mach_z
+
+        u_i_y = np.reshape(u_i_y, mesh_wo_edges[0].shape)
+        u_i_z = np.reshape(u_i_z, mesh_wo_edges[0].shape)
+
+        alpha_from_y = (u_i_y - ion_velocity_term_1[1])/ b_field_norm[1]
+        alpha_from_z = (u_i_z - ion_velocity_term_1[2])/ b_field_norm[2]
+
+
+        ##Fit z~0.4m plane
+        ##
+        alpha_from_y_flattened_z04 = alpha_from_y[:,:,-1].ravel()
+        alpha_from_z_flattened_z04 = alpha_from_z[:,:,-1].ravel()
+        points_x = mesh_wo_edges[0][:, :, -1].ravel()
+        points_y = mesh_wo_edges[1][:, :, -1].ravel()
+        points_z_z04 = mesh[2][0,0,-1]*np.ones(points_x.shape)
+        std_z04 = np.expand_dims(np.zeros(points_x.shape), 0)
+
+        data_y_z04 = {'a_out': np.expand_dims(alpha_from_y_flattened_z04, 0),
+                'x_out': points_x,
+                'y_out': points_y,
+                'z_out': points_z_z04,
+                'std': std_z04
+                }
+        data_z_z04 = {'a_out': np.expand_dims(alpha_from_z_flattened_z04, 0),
+                      'x_out': points_x,
+                      'y_out': points_y,
+                      'z_out': points_z_z04,
+                      'std': std_z04
+                     }
+
+        data_y_z04 = remove_nan_points(data_y_z04)
+        data_z_z04 = remove_nan_points(data_z_z04)
+
+        alpha_interp_z04 = fit_z_alphas(data_z_z04, mesh_wo_edges, s=args.smooth_factor_alpha_z04_fit)
+        alpha_fitted_z04 = np.repeat(np.expand_dims(alpha_interp_z04, 2), density.shape[2], 2)
+
+        ## Fit z~0.3m plane
+        ##
+        alpha_from_z_flattened_z03 = alpha_from_z[:,:,53].ravel()
+        points_x = mesh_wo_edges[0][:, :, -1].ravel()
+        points_y = mesh_wo_edges[1][:, :, -1].ravel()
+        points_z_z03 = mesh[2][0,0,53]*np.ones(points_x.shape)
+        std_z03 = np.expand_dims(np.zeros(points_x.shape), 0)
+
+        data_z_z03 = {'a_out': np.expand_dims(alpha_from_z_flattened_z03, 0),
+                      'x_out': points_x,
+                      'y_out': points_y,
+                      'z_out': points_z_z03,
+                      'std': std_z03
+                     }
+
+        data_z_z03 = remove_nan_points(data_z_z03)
+
+        alpha_interp_z03 = fit_z_alphas(data_z_z03, mesh_wo_edges, s=args.smooth_factor_alpha_z03_fit)
+        alpha_fitted_z03 = np.repeat(np.expand_dims(alpha_interp_z03, 2), density.shape[2], 2)
+
+
+        ## Linearly Interpolate alpha from the two plane values
+        ##
+        m, y0 = fit_line(0.3, 0.4, alpha_interp_z03, alpha_interp_z04)
+        alpha_fitted_both_planes = line_across_planes(m, y0, np.unique(mesh_wo_edges[2]))
+
+
         ion_velocity_term_2 = calc_ion_velocity_term_2(b_field_norm, args.alpha)
+        ion_velocity_term_2_alpha_z03 = calc_ion_velocity_term_2(b_field_norm, alpha_fitted_z03)
+        ion_velocity_term_2_alpha_z04 = calc_ion_velocity_term_2(b_field_norm, alpha_fitted_z04)
+        ion_velocity_term_2_alpha_both_planes = calc_ion_velocity_term_2(b_field_norm, alpha_fitted_both_planes)
 
         ion_vorticity_term_1 = calc_ion_vorticity_term_1(current, density, q_e, mesh_wo_edges)
         ion_vorticity_term_1_constant_density = calc_ion_vorticity_term_1(current, density_constant, q_e, mesh_wo_edges)
         ion_vorticity_term_2 = calc_ion_vorticity_term_2(b_field_norm, args.alpha, mesh_wo_edges)
+        ion_vorticity_term_2_alpha_z03 = calc_ion_vorticity_term_2(b_field_norm, alpha_fitted_z03, mesh_wo_edges)
+        ion_vorticity_term_2_alpha_z04 = calc_ion_vorticity_term_2(b_field_norm, alpha_fitted_z04, mesh_wo_edges)
+        ion_vorticity_term_2_alpha_both_planes = calc_ion_vorticity_term_2(b_field_norm, alpha_fitted_both_planes, mesh_wo_edges)
+
 
         for direction in xrange(len(ion_vorticity_term_1)):
             ion_vorticity_term_1[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_1[direction], args.filter_width)
-            ion_vorticity_term_1_constant_density[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_1_constant_density[direction],
-                                                                                           args.filter_width)
+            ion_vorticity_term_1_constant_density[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_1_constant_density[direction], args.filter_width)
             ion_vorticity_term_2[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2[direction], args.filter_width)
-
+            ion_vorticity_term_2_alpha_z03[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_z03[direction],
+                                                                                args.filter_width)
+            ion_vorticity_term_2_alpha_z04[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_z04[direction],
+                                                                                args.filter_width)
+            ion_vorticity_term_2_alpha_both_planes[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_both_planes[direction],
+                                                                                args.filter_width)
 
         fields = (list(b_field) + list(b_field_norm) + list(current) +
                   [density] + [temperature] +
@@ -166,10 +260,20 @@ def main(args):
                   list(ion_vorticity_term_1) + list(ion_vorticity_term_2) +
                   list(ion_velocity_term_1_constant_density) +
                   list(ion_vorticity_term_1_constant_density) +
-                  [ones])
+                  [ones] +
+                  list(ion_velocity_term_2_alpha_z03) +
+                  list(ion_vorticity_term_2_alpha_z03) +
+                  list(ion_velocity_term_2_alpha_z04) +
+                  list(ion_vorticity_term_2_alpha_z04) +
+                  list(ion_velocity_term_2_alpha_both_planes) +
+                  list((ion_vorticity_term_2_alpha_both_planes) +
+                  [alpha_fitted_z03] +
+                  [alpha_fitted_z04] +
+                  [alpha_fitted_both_planes])
 
-        numpy_archive_name = out_dir + args.output_prefix + str(time_point).zfill(4) + '.npz'
-        save_to_numpy_mesh(mesh_wo_edges, fields[5:9], quantity_names[5:9], numpy_archive_name)
+
+        # numpy_archive_name = out_dir + args.output_prefix + str(time_point).zfill(4) + '.npz'
+        # save_to_numpy_mesh(mesh_wo_edges, fields[5:9], quantity_names[5:9], numpy_archive_name)
 
         x, y, z, variables = prepare_for_rectilinear_grid(mesh_wo_edges, fields,
                                                           quantity_names)
@@ -223,8 +327,63 @@ def parse_args():
                         default=[-10, 10])
     parser.add_argument('--output_prefix', help='prefix of output files', default='Bdot_triple_probe_quantities')
     parser.add_argument('--bias_field_magnitude', help='magnitude of axial bias magnetic field', default=0.02)
+    parser.add_argument('--smooth_factor_alpha_z03_fit', help='FITPACK smooth parameter alpha fit in 30cm plane', default=8e10)
+    parser.add_argument('--smooth_factor_alpha_z04_fit', help='FITPACK smooth parameter alpha fit in 40cm plane', default=7e10)
     args = parser.parse_args()
     return args
+
+
+def fit_line(x1, x2, y1, y2):
+    r"""
+    """
+    m = (y2 - y1)/(x2 - x1)
+    y0 = y1 - m*x1 
+    return m, y0
+
+
+def line_across_planes(m, y0, x):
+    r"""
+    """
+    return np.expand_dims(m, 2)*x + np.expand_dims(y0, 2)
+
+
+def fit_y_z_alphas(data_y, data_z, mesh, s=None):
+    r"""
+    """
+    all_data = np.concatenate((data_y['a_out'][0], data_z['a_out'][0]))
+    all_points_x = np.concatenate((data_y['x_out'], data_z['x_out']))
+    all_points_y = np.concatenate((data_y['y_out'], data_z['y_out']))
+    splines = SmoothBivariateSpline(all_points_x, all_points_y, all_data, s=s)
+    points_x = mesh[0][:, :, -1].ravel()
+    points_y = mesh[1][:, :, -1].ravel()
+    alpha_interp = np.reshape(splines(points_x, points_y, grid=False), mesh[0][:, :, -1].shape)
+    return alpha_interp
+
+
+def fit_z_alphas(data_z, mesh, s=None):
+    r"""
+    """
+    all_data = data_z['a_out'][0]
+    all_points_x = data_z['x_out']
+    all_points_y = data_z['y_out']
+    splines = SmoothBivariateSpline(all_points_x, all_points_y, all_data, s=s)
+    points_x = mesh[0][:, :, -1].ravel()
+    points_y = mesh[1][:, :, -1].ravel()
+    alpha_interp = np.reshape(splines(points_x, points_y, grid=False), mesh[0][:, :, -1].shape)
+    return alpha_interp
+
+
+def plot_spline_data_knots(scalar_resampled, x_grid, y_grid, data_dict, knots,
+                           time_point = 0,
+                           spline_color='blue', data_color='black', knots_color='red'):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_wireframe(x_grid[::2,::2], y_grid[::2,::2], scalar_resampled[::2,::2], colors=spline_color)
+    #ax.scatter(data_dict['x_out'], data_dict['y_out'], data_dict['a_out'][time_point], c=data_color)
+    #ax.scatter(knots[0], knots[1], 0, c=knots_color, marker='^')
+    ax.set_xlabel('x [m]')
+    ax.set_ylabel('y [m]')
+    plt.show()
 
 
 def prepare_mach_probe_data(args):
@@ -328,7 +487,7 @@ def prepare_idl_quantity(name, planes, bounds=None):
     """
     measurements = struc_3d.read_idl(name, )
     if bounds:
-        measurements = struc_3d.remove_points_out_of_bounds(measurements, 
+        measurements = struc_3d.remove_points_out_of_bounds(measurements,
                                                             bounds[0], bounds[1], planes)
     for plane in planes:
         measurements[plane] = struc_3d.average_duplicate_points(measurements[plane])
@@ -339,16 +498,16 @@ def combine_all_planes(measurements, planes):
     r"""
     """
     all_planes = dict(measurements[planes[0]])
-    all_planes['z_out'] = planes[0]*np.ones(all_planes['x_out'].size) 
+    all_planes['z_out'] = planes[0]*np.ones(all_planes['x_out'].size)
     for plane in planes[1:]:
         for key in ['x_out', 'y_out']:
-            all_planes[key] = np.concatenate((all_planes[key], 
+            all_planes[key] = np.concatenate((all_planes[key],
                                               measurements[plane][key]))
         all_planes['z_out'] = np.concatenate((all_planes['z_out'],
                                               plane*np.ones(measurements[plane]['x_out'].size)))
         for key in ['std', 'a_out']:
             for time_point in xrange(measurements[plane]['delays'].size):
-                all_planes[key][time_point] = np.concatenate((all_planes[key][time_point], 
+                all_planes[key][time_point] = np.concatenate((all_planes[key][time_point],
                                                               measurements[plane][key][time_point]))
     return all_planes
 
@@ -359,21 +518,21 @@ def remove_points_outside_convex(measurements,
                                  z_min=0.249, z_max=0.416):
     r"""
     """
-    points = np.dstack((measurements['x_out'], 
-                        measurements['y_out'], 
+    points = np.dstack((measurements['x_out'],
+                        measurements['y_out'],
                         measurements['z_out']))[0]
-    outside_convex_volume = np.where(np.logical_or.reduce((points[:, 0] < x_min, 
-                                                           points[:, 0] > x_max, 
+    outside_convex_volume = np.where(np.logical_or.reduce((points[:, 0] < x_min,
+                                                           points[:, 0] > x_max,
                                                            points[:, 1] < y_min,
                                                            points[:, 1] > y_max,
                                                            points[:, 2] < z_min,
                                                            points[:, 2] > z_max)))[0]
     for key in ['x_out', 'y_out', 'z_out']:
-        measurements[key] = np.delete(measurements[key], 
+        measurements[key] = np.delete(measurements[key],
                                       outside_convex_volume)
     for key in ['std', 'a_out']:
         for time_point in xrange(measurements['delays'].size):
-            measurements[key][time_point] = np.delete(measurements[key][time_point], 
+            measurements[key][time_point] = np.delete(measurements[key][time_point],
                                                       outside_convex_volume)
     return measurements
 
@@ -383,10 +542,10 @@ def remove_nan_points(measurements):
     """
     nan_positions = np.where(np.isnan(measurements['a_out']))[1]
     for key in ['x_out', 'y_out', 'z_out']:
-        measurements[key] = np.delete(measurements[key], 
+        measurements[key] = np.delete(measurements[key],
                                       nan_positions)
     for key in ['std', 'a_out']:
-        measurements[key] = np.delete(measurements[key], 
+        measurements[key] = np.delete(measurements[key],
                                       nan_positions, axis=1)
     return measurements
 
@@ -394,13 +553,13 @@ def remove_nan_points(measurements):
 def prepare_for_unstructured_vtk(measurements, quantity_name):
     r"""
     """
-    points = np.dstack((measurements['x_out'], 
-                        measurements['y_out'], 
+    points = np.dstack((measurements['x_out'],
+                        measurements['y_out'],
                         measurements['z_out']))[0]
     triangulation = Delaunay(points)
     points = tuple(points.ravel())
-    connectivity = tuple([(visit_writer.tetrahedron, int(simplex[0]), 
-                           int(simplex[1]), int(simplex[2]), int(simplex[3])) 
+    connectivity = tuple([(visit_writer.tetrahedron, int(simplex[0]),
+                           int(simplex[1]), int(simplex[2]), int(simplex[3]))
                            for simplex in triangulation.simplices])
     variables_all_time = []
     for time_point in xrange(measurements['delays'].size):
@@ -413,11 +572,11 @@ def give_delaunay_and_interpolator(measurements):
     r"""
     """
     if np.unique(measurements['z_out']).size < 2:
-        points = np.dstack((measurements['x_out'], 
+        points = np.dstack((measurements['x_out'],
                             measurements['y_out']))[0]
     else:
-        points = np.dstack((measurements['x_out'], 
-                            measurements['y_out'], 
+        points = np.dstack((measurements['x_out'],
+                            measurements['y_out'],
                             measurements['z_out']))[0]
     triangulation = Delaunay(points)
     interpolators = []
@@ -432,7 +591,7 @@ def write_all_time_unstructured(file_prefix, points, connectivity, variables_all
     for time_point in xrange(len(variables_all_time)):
         path = file_prefix + str(time_point).zfill(4)
         visit_writer.WriteUnstructuredMesh(path, 1, points,
-                                           connectivity, 
+                                           connectivity,
                                            variables[time_point])
 
 
@@ -449,20 +608,20 @@ def save_idl_quantity_to_unstructured_grids(idl_quantity_name,
     """
     file_prefix = '../output/' + date + '/' + visit_quantity_name + file_name_descriptor
     measurements = prepare_idl_quantity(idl_quantity_name, planes, bounds=bounds)
-    all_planes = combine_all_planes(measurements, planes) 
-    all_planes = remove_points_outside_convex(all_planes, 
+    all_planes = combine_all_planes(measurements, planes)
+    all_planes = remove_points_outside_convex(all_planes,
                                               x_min=x_min, x_max=x_max,
                                               y_min=y_min, y_max=y_max,
                                               z_min=z_min, z_max=z_max)
     assert len(all_planes['x_out']) == len(all_planes['y_out']) == len(all_planes['z_out'])
-    #(points, 
-    # connectivity, 
+    #(points,
+    # connectivity,
     # variables_all_time) = prepare_for_unstructured_vtk(all_planes, visit_quantity_name)
     #assert len(points) == len(all_planes['x_out'])*3
     #assert len(variables_all_time[0][0][3]) == len(all_planes['x_out'])
-    #write_all_time_unstructured(file_prefix, points, 
+    #write_all_time_unstructured(file_prefix, points,
     #                            connectivity, variables_all_time)
-    return all_planes 
+    return all_planes
 
 
 def save_quantity_to_unstructured_grids(measurements,
@@ -478,20 +637,20 @@ def save_quantity_to_unstructured_grids(measurements,
     r"""
     """
     file_prefix = '../output/' + date + '/' + visit_quantity_name + file_name_descriptor
-    all_planes = combine_all_planes(measurements, planes) 
-    all_planes = remove_points_outside_convex(all_planes, 
+    all_planes = combine_all_planes(measurements, planes)
+    all_planes = remove_points_outside_convex(all_planes,
                                               x_min=x_min, x_max=x_max,
                                               y_min=y_min, y_max=y_max,
                                               z_min=z_min, z_max=z_max)
     assert len(all_planes['x_out']) == len(all_planes['y_out']) == len(all_planes['z_out'])
-    #(points, 
-    # connectivity, 
+    #(points,
+    # connectivity,
     # variables_all_time) = prepare_for_unstructured_vtk(all_planes, visit_quantity_name)
     #assert len(points) == len(all_planes['x_out'])*3
     #assert len(variables_all_time[0][0][3]) == len(all_planes['x_out'])
-    #write_all_time_unstructured(file_prefix, points, 
+    #write_all_time_unstructured(file_prefix, points,
     #                            connectivity, variables_all_time)
-    return all_planes 
+    return all_planes
 
 
 def triangulate_derivatives(mesh, triangulation, interpolator, increment=0.00001):
@@ -515,8 +674,8 @@ def triangulate_derivatives(mesh, triangulation, interpolator, increment=0.00001
 
 
 def remove_edges_derivative_meshes(derivative_meshes,
-                                   x_start=2, x_end=None, 
-                                   y_start=0, y_end=-2, 
+                                   x_start=2, x_end=None,
+                                   y_start=0, y_end=-2,
                                    z_start=0, z_end=-1):
     r"""
     """
@@ -526,8 +685,8 @@ def remove_edges_derivative_meshes(derivative_meshes,
 
 
 def remove_edges_vector_quantity_meshes(quantity_meshes,
-                                        x_start=2, x_end=None, 
-                                        y_start=0, y_end=-2, 
+                                        x_start=2, x_end=None,
+                                        y_start=0, y_end=-2,
                                         z_start=0, z_end=-1):
     r"""
     """
@@ -537,8 +696,8 @@ def remove_edges_vector_quantity_meshes(quantity_meshes,
 
 
 def remove_edges_scalar_quantity_meshes(quantity_mesh,
-                                        x_start=2, x_end=None, 
-                                        y_start=0, y_end=-2, 
+                                        x_start=2, x_end=None,
+                                        y_start=0, y_end=-2,
                                         z_start=0, z_end=-1):
     r"""
     """
@@ -547,8 +706,8 @@ def remove_edges_scalar_quantity_meshes(quantity_mesh,
 
 
 def remove_edges_mesh(mesh,
-                      x_start=2, x_end=None, 
-                      y_start=0, y_end=-2, 
+                      x_start=2, x_end=None,
+                      y_start=0, y_end=-2,
                       z_start=0, z_end=-1):
     r"""
     """
@@ -563,7 +722,7 @@ def prepare_for_rectilinear_grid(mesh, quantities, quantity_names):
     x = tuple(np.unique(mesh[0]))
     y = tuple(np.unique(mesh[1]))
     z = tuple(np.unique(mesh[2]))
-    variables = [(quantity_names[index], 1, 1, 
+    variables = [(quantity_names[index], 1, 1,
                   tuple(np.swapaxes(np.swapaxes(quantities[index], 1, 2), 0, 1).ravel()))
                  for index in xrange(len(quantities))]
     return x, y, z, variables
@@ -592,7 +751,7 @@ def current_on_mesh(derivative_meshes_all_directions, mu_0=mu_0):
     j_x = 1./(mu_0) * (dBz_dy - dBy_dz)
     j_y = 1./(mu_0) * (dBx_dz - dBz_dx)
     j_z = 1./(mu_0) * (dBy_dx - dBx_dy)
-    current = [j_x, j_y, j_z]    
+    current = [j_x, j_y, j_z]
     return current
 
 
@@ -601,16 +760,16 @@ def b_field_on_mesh(interpolator_all_directions, mesh, bias=2e-2):
     """
     shape = mesh[0].shape
     points = np.swapaxes(np.asarray([mesh[0].ravel(), mesh[1].ravel(), mesh[2].ravel()]), 0, 1)
-    b_x = interpolator_all_directions[0](points)  
+    b_x = interpolator_all_directions[0](points)
     b_y = interpolator_all_directions[1](points)
     b_z = interpolator_all_directions[2](points)
     b_x = np.resize(b_x, shape)
     b_y = np.resize(b_y, shape)
     b_z = np.resize(b_z, shape)
-    b_z += bias 
+    b_z += bias
     b_x_norm = b_x / np.sqrt(b_x**2. + b_y**2. + b_z**2.)
     b_y_norm = b_y / np.sqrt(b_x**2. + b_y**2. + b_z**2.)
-    b_z_norm = b_z / np.sqrt(b_x**2. + b_y**2. + b_z**2.)    
+    b_z_norm = b_z / np.sqrt(b_x**2. + b_y**2. + b_z**2.)
     b_field = [b_x, b_y, b_z]
     b_field_norm = [b_x_norm, b_y_norm, b_z_norm]
     return b_field, b_field_norm
@@ -631,12 +790,12 @@ def scalar_on_mesh(interpolator, mesh):
     return scalar
 
 
-def write_fields_and_currents_to_structured_mesh(date, visit_file_name, 
+def write_fields_and_currents_to_structured_mesh(date, visit_file_name,
                                                  x, y, z, data, time_point):
     r"""
     """
     file_prefix = '../output/' + date + '/' + visit_file_name
-    path = file_prefix + str(time_point).zfill(4)  
+    path = file_prefix + str(time_point).zfill(4)
     print path
     visit_writer.WriteRectilinearMesh(path, 1, x, y, z, data)
 
@@ -646,9 +805,9 @@ def bdot_probe_extent():
     """
     x_min = -0.026
     x_max = 0.024
-    y_min = -0.02 
+    y_min = -0.02
     y_max = 0.028
-    z_min = 0.249 
+    z_min = 0.249
     z_max = 0.416
     return x_min, x_max, y_min, y_max, z_min, z_max
 
@@ -657,9 +816,9 @@ def joint_bdot_tp_extent():
     """
     x_min = -0.022
     x_max = 0.024
-    y_min = -0.02 
+    y_min = -0.02
     y_max = 0.024
-    z_min = 0.249 
+    z_min = 0.249
     z_max = 0.416
     return x_min, x_max, y_min, y_max, z_min, z_max
 
@@ -668,9 +827,9 @@ def joint_mach_bdot_tp_extent():
     """
     x_min = -0.022
     x_max = 0.024
-    y_min = -0.02 
+    y_min = -0.02
     y_max = 0.018
-    z_min = 0.249 
+    z_min = 0.249
     z_max = 0.416
     return x_min, x_max, y_min, y_max, z_min, z_max
 
@@ -742,4 +901,4 @@ def boxcar_filter_quantity_mesh(quantity, width):
 
 if __name__ == '__main__':
     args = parse_args()
-    main(args) 
+    main(args)
