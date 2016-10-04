@@ -18,6 +18,7 @@ import scipy.fftpack as fftpack
 import scipy.integrate as integrate
 from read_from_shotlog import read_and_store_shotlog
 from reference_time import determine_reference_times_all_shots
+from scipy.integrate import cumtrapz
 
 
 def build_database(database='shots.db', start=15253, end=17623):
@@ -323,7 +324,7 @@ def add_fiducial_signal_heuristics(database, pre_crowbar_sd_slice, sd_slice,
         end_index = zero_phase_index + np.ceil(period/time_step)*1.25
         zero = np.mean(fiducial[:500])
         integral = cumtrapz(fiducial[start_index:end_index]-zero, dx=time_step, initial=0)
-        gyration_amplitude = np.min(integral)/2.
+        gyration_amplitude = np.abs(np.min(integral)/2.)
 
         cursor.execute("UPDATE Shots SET " +
                        "fiducial_pre_crowbar_gyration_spectral_density = :pre_sd, " +
