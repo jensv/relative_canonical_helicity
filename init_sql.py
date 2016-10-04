@@ -21,6 +21,7 @@ cursor.execute("CREATE TABLE Shots(shot INTEGER, exists_in_shotlog BOOLEAN, " +
                "bias_current_crowbar_time FLOAT, bias_current_pre_ramp_std FLOAT, " +
                "fiducial_pre_crowbar_gyration_spectral_density FLOAT, " +
                "fiducial_gyration_spectral_density FLOAT, " +
+               "uncalibrated_integrated_fiducial_a_gyration_amplitude FLOAT, " +
                "phase_reference_time_idl_code_succeeded BOOLEAN, " +
                "ramp_reference_time_idl_code_succeeded BOOLEAN, " +
                "zero_phase_time REAL, zero_phase_index INTEGER, " +

@@ -300,6 +300,8 @@ def add_fiducial_signal_heuristics(database, pre_crowbar_sd_slice, sd_slice,
     rows = cursor.fetchall()
     for row in rows:
         print "Add fiducial signal heuristics to shot %i" % row['shot']
+        period = row['period']
+        zero_phase_index = row['zero_phase_index']
         gyration_freq = 1. / row['period']
         tree = mds.Tree('rsx', row['shot'])
         fiducial_node_name = row['fiducial_a_node']
@@ -307,21 +309,31 @@ def add_fiducial_signal_heuristics(database, pre_crowbar_sd_slice, sd_slice,
         fiducial_data = fiducial_node.getData()
         fiducial = np.asarray(fiducial_data.getValue())
         fiducial_time =  np.asarray(fiducial_data.getDimensions()[0])*1e-3
+        time_step = fiducial_time[1] - fiducial_time[0]
         pre_crowbar_gyration_sd = get_gyration_sd(fiducial_time, fiducial,
                                                   sd_slice, gyration_freq,
                                                   std_gyration_freq)
         gyration_sd = get_gyration_sd(fiducial_time, fiducial,
                                       pre_crowbar_sd_slice, gyration_freq,
                                       std_gyration_freq)
-
         n_std = np.ceil((gyration_freq - mean_gyration_freq) / std_gyration_freq)
+
+        ### determine uncalibrated gyration amplitude
+        start_index = zero_phase_index
+        end_index = zero_phase_index + np.ceil(period/time_step)*1.25
+        zero = np.mean(fiducial[:500])
+        integral = cumtrapz(fiducial[start_index:end_index]-zero, dx=time_step, initial=0)
+        gyration_amplitude = np.min(integral)/2.
+
         cursor.execute("UPDATE Shots SET " +
                        "fiducial_pre_crowbar_gyration_spectral_density = :pre_sd, " +
                        "fiducial_gyration_spectral_density = :sd, " +
-                       "period_within_n_std = :n_std " +
+                       "period_within_n_std = :n_std, " +
+                       "uncalibrated_integrated_fiducial_a_gyration_amplitude = :gyration_amplitude "
                        "WHERE shot = :shot;",
                        {'shot': row['shot'], 'pre_sd': pre_crowbar_gyration_sd.tolist(),
-                        'sd': gyration_sd.tolist(), 'n_std': n_std.tolist()})
+                        'sd': gyration_sd.tolist(), 'n_std': n_std.tolist(),
+                        'gyration_amplitude': gyration_amplitude})
     connection.commit()
     cursor.close()
     connection.close()
