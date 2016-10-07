@@ -29,6 +29,9 @@ import ion_current_to_mach_number as ic_to_mach
 reload(ic_to_mach)
 import read_from_sql
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 
 def main(args):
     r"""
@@ -53,12 +56,16 @@ def main(args):
                                                            *args.n_extent,
                                                            bounds=args.n_bounds)
 
+
+    n_three_planes = remove_plane(0.302, n_all_planes)
+    te_three_planes = remove_plane(0.302, te_all_planes)
+
     mach_y_all_planes, mach_z_all_planes = prepare_mach_probe_data(args)
     bx_triangulation, bx_interpolators = give_delaunay_and_interpolator(bx_all_planes)
     by_triangulation, by_interpolators = give_delaunay_and_interpolator(by_all_planes)
     bz_triangulation, bz_interpolators = give_delaunay_and_interpolator(bz_all_planes)
-    te_triangulation, te_interpolators = give_delaunay_and_interpolator(te_all_planes)
-    n_triangulation, n_interpolators = give_delaunay_and_interpolator(n_all_planes)
+    te_triangulation, te_interpolators = give_delaunay_and_interpolator(te_three_planes)
+    n_triangulation, n_interpolators = give_delaunay_and_interpolator(n_three_planes)
     mach_y_triangulation, mach_y_interpolators = give_delaunay_and_interpolator(mach_y_all_planes)
     mach_z_triangulation, mach_z_interpolators = give_delaunay_and_interpolator(mach_z_all_planes)
 
@@ -68,7 +75,7 @@ def main(args):
 
     mesh = np.meshgrid(np.linspace(x_min, x_max, np.ceil((x_max-x_min)/args.spatial_increment)),
                        np.linspace(y_min, y_max, np.ceil((y_max-y_min)/args.spatial_increment)),
-                       np.linspace(z_min, z_max, np.ceil((z_max-z_min)/args.spatial_increment)))
+                       np.linspace(z_min, z_max, np.ceil((z_max-z_min)/(args.spatial_increment*10))))
 
     ## Specific example of velocity calculation
     ##mach_y_interpolator = mach_y_interpolators[70]
@@ -145,9 +152,11 @@ def main(args):
 
         current = np.asarray(current)
         density = np.asarray(density)
+        temperature = np.asarray(temperature)
         b_field_norm = np.asarray(b_field_norm)
 
         density = boxcar_filter_quantity_mesh(density, args.filter_width)
+        temperature = boxcar_filter_quantity_mesh(temperature, args.filter_width)
 
         for direction in xrange(len(current)):
             current[direction] = boxcar_filter_quantity_mesh(current[direction], args.filter_width)
@@ -163,7 +172,7 @@ def main(args):
 
         mach_y = scalar_on_mesh(mach_y_interpolator, mesh_wo_edges[:2])
         mach_z = scalar_on_mesh(mach_z_interpolator, mesh_wo_edges)
-        te = scalar_on_mesh(te_interpolator, mesh_wo_edges)
+        te = temperature
 
         u_i_y = np.sqrt(te*q_e/m_i)*mach_y
         u_i_z = np.sqrt(te*q_e/m_i)*mach_z
@@ -266,7 +275,7 @@ def main(args):
                   list(ion_velocity_term_2_alpha_z04) +
                   list(ion_vorticity_term_2_alpha_z04) +
                   list(ion_velocity_term_2_alpha_both_planes) +
-                  list((ion_vorticity_term_2_alpha_both_planes) +
+                  list(ion_vorticity_term_2_alpha_both_planes) +
                   [alpha_fitted_z03] +
                   [alpha_fitted_z04] +
                   [alpha_fitted_both_planes])
@@ -716,6 +725,17 @@ def remove_edges_mesh(mesh,
     return mesh
 
 
+def remove_plane(plane, measurements):
+    plane_positions = np.where(measurements['z_out'] == plane)[0]
+    for key in ['x_out', 'y_out', 'z_out']:
+        measurements[key] = np.delete(measurements[key],
+                                      plane_positions)
+    for key in ['std', 'a_out']:
+        measurements[key] = np.delete(measurements[key],
+                                      plane_positions, axis=1)
+    return measurements
+
+
 def prepare_for_rectilinear_grid(mesh, quantities, quantity_names):
     r"""
     """
@@ -734,7 +754,7 @@ def save_to_numpy_mesh(mesh, quantities, quantity_names, filename):
     dict_to_save = {'mesh_x': mesh[0],
                     'mesh_y': mesh[1],
                     'mesh_z': mesh[2]}
-    for i, quanitity in enumerate(quantities):
+    for i, quantity in enumerate(quantities):
         dict_to_save[quantity_names[i]] = quantities
     np.savez(filename, **dict_to_save)
 
@@ -879,6 +899,7 @@ def calc_ion_vorticity_term_2(b_field_norm, alpha, mesh):
     """
     return curl_on_mesh(calc_ion_velocity_term_2(b_field_norm, alpha), mesh)
 
+
 def boxcar_filter_quantity_mesh(quantity, width):
     r"""
     """
@@ -897,6 +918,90 @@ def boxcar_filter_quantity_mesh(quantity, width):
     boxcar = np.ones((width, width, width))
     boxcar /= boxcar.sum()
     return fftconvolve(quantity, boxcar, mode='same')
+
+
+def fit_y_z_alphas(data_y, data_z, mesh, s=None):
+    r"""
+    """
+    all_data = np.concatenate((data_y['a_out'][0], data_z['a_out'][0]))
+    all_points_x = np.concatenate((data_y['x_out'], data_z['x_out']))
+    all_points_y = np.concatenate((data_y['y_out'], data_z['y_out']))
+    splines = SmoothBivariateSpline(all_points_x, all_points_y, all_data, s=s)
+    points_x = mesh[0][:, :, -1].ravel()
+    points_y = mesh[1][:, :, -1].ravel()
+    alpha_interp = np.reshape(splines(points_x, points_y, grid=False), mesh[0][:, :, -1].shape)
+    return alpha_interp
+
+
+def fit_z_alphas(data_z, mesh, s=None):
+    r"""
+    """
+    all_data = data_z['a_out'][0]
+    all_points_x = data_z['x_out']
+    all_points_y = data_z['y_out']
+    splines = SmoothBivariateSpline(all_points_x, all_points_y, all_data, s=s)
+    points_x = mesh[0][:, :, -1].ravel()
+    points_y = mesh[1][:, :, -1].ravel()
+    alpha_interp = np.reshape(splines(points_x, points_y, grid=False), mesh[0][:, :, -1].shape)
+    return alpha_interp
+
+
+def plot_spline_data_knots(scalar_resampled, x_grid, y_grid, data_dict, knots,
+                           time_point = 0, 
+                           spline_color='blue', data_color='black', knots_color='red'):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_wireframe(x_grid[::2,::2], y_grid[::2,::2], scalar_resampled[::2,::2], colors=spline_color)
+    #ax.scatter(data_dict['x_out'], data_dict['y_out'], data_dict['a_out'][time_point], c=data_color)
+    #ax.scatter(knots[0], knots[1], 0, c=knots_color, marker='^')
+    ax.set_xlabel('x [m]')
+    ax.set_ylabel('y [m]')
+    plt.show()
+
+
+def fit_line(x1, x2, y1, y2):
+    m = (y2 - y1)/(x2 - x1)
+    y0 = y1 - m*x1 
+    return m, y0
+
+
+def line(m, y0, x):
+    return np.expand_dims(m, 2)*x + np.expand_dims(y0, 2)
+
+
+def plot_planes(planes, mesh, quantity, interpolator=True,
+                figsize=None):
+    number = len(planes)
+    if not figsize:
+        fig, axes = plt.subplots(1, number, 
+                                 sharex=True, 
+                                 sharey=True)
+    else:
+        fig, axes = plt.subplots(1, number, 
+                                 sharex=True, 
+                                 sharey=True,
+                                 figsize=figsize)
+    for i, plane in enumerate(planes):
+        if interpolator:
+            interpolator = quantity
+            shape = mesh[0][:, :, 0].shape
+            points_x = mesh[0][:, :, 0].ravel()
+            points_y = mesh[1][:, :, 0].ravel()
+            points_z = np.ones(points_x.size)*plane
+            points = np.dstack((points_x, 
+                                points_y, 
+                                points_z))[0]
+            values = interpolator(points)
+            values = values.reshape(shape)
+        else:
+            plane_index = np.where(mesh[2][0, 0, :] >= plane)[0][0]
+            values = quantity[:, :, plane_index]
+        contour = axes[i].contourf(mesh[0][:, :, 0], mesh[1][:, :, 0], values)
+        axes[i].set_title(r'$z = %3.3f m$' % plane)
+        divider = make_axes_locatable(axes[i])
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        plt.colorbar(contour, cax=cax)
+    return fig, axes
 
 
 if __name__ == '__main__':
