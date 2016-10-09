@@ -32,6 +32,8 @@ import read_from_sql
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+import pdb
+
 
 def main(args):
     r"""
@@ -72,10 +74,6 @@ def main(args):
     (x_min, x_max,
      y_min, y_max,
      z_min, z_max) = args.joint_extent
-
-    mesh = np.meshgrid(np.linspace(x_min, x_max, np.ceil((x_max-x_min)/args.spatial_increment)),
-                       np.linspace(y_min, y_max, np.ceil((y_max-y_min)/args.spatial_increment)),
-                       np.linspace(z_min, z_max, np.ceil((z_max-z_min)/(args.spatial_increment*10))))
 
     ## Specific example of velocity calculation
     ##mach_y_interpolator = mach_y_interpolators[70]
@@ -161,6 +159,10 @@ def main(args):
         for direction in xrange(len(current)):
             current[direction] = boxcar_filter_quantity_mesh(current[direction], args.filter_width)
 
+        current_filtered_x = current[0]
+        current_filtered_y = current[1]
+        current_filtered_z = current[2]
+    
         density_constant = args.density_constant_factor*np.ones(density.shape)
 
         ion_velocity_term_1 = calc_ion_velocity_term_1(current, density, q_e)
@@ -194,11 +196,11 @@ def main(args):
         std_z04 = np.expand_dims(np.zeros(points_x.shape), 0)
 
         data_y_z04 = {'a_out': np.expand_dims(alpha_from_y_flattened_z04, 0),
-                'x_out': points_x,
-                'y_out': points_y,
-                'z_out': points_z_z04,
-                'std': std_z04
-                }
+                      'x_out': points_x,
+                      'y_out': points_y,
+                      'z_out': points_z_z04,
+                      'std': std_z04
+                     }
         data_z_z04 = {'a_out': np.expand_dims(alpha_from_z_flattened_z04, 0),
                       'x_out': points_x,
                       'y_out': points_y,
@@ -280,7 +282,7 @@ def main(args):
                   [alpha_fitted_z04] +
                   [alpha_fitted_both_planes])
 
-
+        # pdb.set_trace()
         # numpy_archive_name = out_dir + args.output_prefix + str(time_point).zfill(4) + '.npz'
         # save_to_numpy_mesh(mesh_wo_edges, fields[5:9], quantity_names[5:9], numpy_archive_name)
 
