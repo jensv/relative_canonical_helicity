@@ -18,6 +18,7 @@ import argparse
 
 tan = (209, 178, 111, 255)
 olive = (110, 117, 14, 255)
+green = (0, 154, 0, 255)
 
 def define_expressions(visit, alpha=8.1e5):
     r"""
@@ -31,6 +32,7 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineScalarExpression("B_para_scalar", "B_z")
 
     visit.DefineVectorExpression("J", "{j_x, j_y, j_z}")
+    visit.DefineVectorExpression("J_unfiltered", "{j_unfiltered_x, j_unfiltered_y, j_unfiltered_z}")
     visit.DefineScalarExpression("J_mag", "sqrt(j_x^2 + j_y^2 + j_z^2)")
     visit.DefineVectorExpression("J_perp", "{j_x, j_y, 0}")
     visit.DefineVectorExpression("J_para", "{0, 0, j_z}")
@@ -43,6 +45,12 @@ def define_expressions(visit, alpha=8.1e5):
                                  "dot(u_e, {0, 1, 0}), 0}")
     visit.DefineScalarExpression("u_e_para_scalar", "dot(u_e, {0, 0, 1})")
 
+    visit.DefineVectorExpression("u_e_fitted_alpha_z03", "{u_e_x_fitted_alpha_z03, u_e_y_fitted_alpha_z03, "
+                                 "u_e_z_fitted_alpha_z03}")
+    visit.DefineVectorExpression("u_e_fitted_alpha_z04", "{u_e_x_fitted_alpha_z04, u_e_y_fitted_alpha_z04, "
+                                 "u_e_z_fitted_alpha_z04}")
+    visit.DefineVectorExpression("u_e_fitted_alpha_both_planes", "{u_e_x_fitted_alpha_both_planes, u_e_y_fitted_alpha_both_planes, "
+                                 "u_e_z_fitted_alpha_both_planes}")
 
     visit.DefineVectorExpression("u_i_term1", "{u_i_term1_x, u_i_term1_y, "
                                  "u_i_term1_z}")
@@ -67,11 +75,24 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineScalarExpression("omega_i_term2_para_scalar",
                                  "w_i_term2_z * %1.2e" % alpha)
 
+    visit.DefineVectorExpression("omega_i_term2_fitted_alpha_z03", "{w_i_term2_x_fitted_alpha_z03,"
+                                 "w_i_term2_y_fitted_alpha_z03, w_i_term2_z_fitted_alpha_z03}")
+    visit.DefineVectorExpression("omega_i_term2_fitted_alpha_z04", "{w_i_term2_x_fitted_alpha_z04,"
+                                 "w_i_term2_y_fitted_alpha_z04, w_i_term2_z_fitted_alpha_z04}")
+    visit.DefineVectorExpression("omega_i_term2_fitted_alpha_both_planes", "{w_i_term2_x_fitted_alpha_both_planes,"
+                                 "w_i_term2_y_fitted_alpha_both_planes, w_i_term2_z_fitted_alpha_both_planes}")
+
+
     visit.DefineVectorExpression("u_i", "u_i_term1 + u_e")
     visit.DefineVectorExpression("u_i_perp", "{dot(u_i, {1, 0, 0}), dot(u_i, "
                                  "{0, 1, 0}), 0}")
     visit.DefineVectorExpression("u_i_para", "{0, 0, dot(u_i, {0, 0, 1})}")
     visit.DefineScalarExpression("u_i_para_scalar", "dot(u_i, {0, 0, 1})")
+
+
+    visit.DefineVectorExpression("u_i_fitted_alpha_z03", "u_i_term1 + u_e_fitted_alpha_z03")
+    visit.DefineVectorExpression("u_i_fitted_alpha_z04", "u_i_term1 + u_e_fitted_alpha_z04")
+    visit.DefineVectorExpression("u_i_fitted_alpha_both_planes", "u_i_term1 + u_e_fitted_alpha_both_planes")
 
     visit.DefineVectorExpression("omega_i", "omega_i_term1 + "
                                  "omega_i_term2")
@@ -82,6 +103,13 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineScalarExpression("omega_i_para_scalar", "dot(omega_i, "
                                  "{0, 0, 1})")
 
+    visit.DefineVectorExpression("omega_i_fitted_alpha_z03", "omega_i_term1 + "
+                                 "omega_i_term2_fitted_alpha_z03")
+    visit.DefineVectorExpression("omega_i_fitted_alpha_z04", "omega_i_term1 + "
+                                 "omega_i_term2_fitted_alpha_z04")
+    visit.DefineVectorExpression("omega_i_fitted_alpha_both_planes", "omega_i_term1 + "
+                                 "omega_i_term2_fitted_alpha_both_planes")
+
     visit.DefineVectorExpression("Omega_i", "B +" + str(proton_mass) + "/" +
                                  str(elementary_charge) + "*omega_i")
     visit.DefineVectorExpression("Omega_i_perp", "{dot(Omega_i, {1, 0, 0}), "
@@ -90,6 +118,13 @@ def define_expressions(visit, alpha=8.1e5):
                                  "{0, 0, 1})}")
     visit.DefineScalarExpression("Omega_i_para_scalar",
                                  "dot(Omega_i, {0, 0, 1})")
+
+    visit.DefineVectorExpression("Omega_i_fitted_alpha_z03", "B +" + str(proton_mass) + "/" +
+                                 str(elementary_charge) + "*omega_i_fitted_alpha_z03")
+    visit.DefineVectorExpression("Omega_i_fitted_alpha_z04", "B +" + str(proton_mass) + "/" +
+                                 str(elementary_charge) + "*omega_i_fitted_alpha_z03")
+    visit.DefineVectorExpression("Omega_i_fitted_alpha_both_planes", "B +" + str(proton_mass) + "/" +
+                                 str(elementary_charge) + "*omega_i_fitted_alpha_both_planes")
 
 
 def launch_points(center, plane=0.249, num_inner=80, num_outer=60):
@@ -245,6 +280,76 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
     return StreamlineAtts_forward, StreamlineAtts_backward
 
 
+def setup_current_backward_stream(visit, launch_points, color=green):
+    r"""
+    """
+    visit.AddPlot("Streamline", "J", 1, 0)
+    StreamlineAtts_current_backward = visit.StreamlineAttributes()
+    StreamlineAtts_current_backward.sourceType = StreamlineAtts_current_backward.SpecifiedPointList
+    StreamlineAtts_current_backward.SetPointList(launch_points)
+    StreamlineAtts_current_backward.coloringMethod = StreamlineAtts_current_backward.Solid
+    StreamlineAtts_current_backward.colorTableName = "Default"
+    StreamlineAtts_current_backward.singleColor = color
+    StreamlineAtts_current_backward.integrationDirection = StreamlineAtts_current_backward.Backward
+    StreamlineAtts_current_backward.legendFlag = 0
+    visit.SetPlotOptions(StreamlineAtts_current_backward)
+
+    return StreamlineAtts_current_backward
+
+
+def setup_current_unfiltered_backward_stream(visit, launch_points, color=green):
+    r"""
+    """
+    visit.AddPlot("Streamline", "J_unfiltered", 1, 0)
+    StreamlineAtts_current_unfiltered_backward = visit.StreamlineAttributes()
+    StreamlineAtts_current_unfiltered_backward.sourceType = StreamlineAtts_current_unfiltered_backward.SpecifiedPointList
+    StreamlineAtts_current_unfiltered_backward.SetPointList(launch_points)
+    StreamlineAtts_current_unfiltered_backward.coloringMethod = StreamlineAtts_current_unfiltered_backward.Solid
+    StreamlineAtts_current_unfiltered_backward.colorTableName = "Default"
+    StreamlineAtts_current_unfiltered_backward.singleColor = color
+    StreamlineAtts_current_unfiltered_backward.integrationDirection = StreamlineAtts_current_unfiltered_backward.Backward
+    StreamlineAtts_current_unfiltered_backward.legendFlag = 0
+    visit.SetPlotOptions(StreamlineAtts_current_unfiltered_backward)
+
+    return StreamlineAtts_current_unfiltered_backward
+
+
+def setup_forward_backward_alpha_fitted_ion_canonical_flux_tubes(visit, points_foward,
+                                                    points_backward,
+                                                    forward_color=tan,
+                                                    backward_color=olive):
+    r"""
+    Setup two ion canonical flux tubes, one integrating in the forward
+    direction, one integrating in the backward direction.
+    """
+    visit.AddPlot("Streamline", "Omega_i_alpha_fitted", 1, 0)
+
+    StreamlineAtts_forward = visit.StreamlineAttributes()
+    StreamlineAtts_forward.sourceType = StreamlineAtts_forward.SpecifiedPointList
+    StreamlineAtts_forward.SetPointList(points_foward)
+    StreamlineAtts_forward.coloringMethod = StreamlineAtts_forward.Solid
+    StreamlineAtts_forward.colorTableName = "Default"
+    StreamlineAtts_forward.singleColor = forward_color
+    StreamlineAtts_forward.integrationDirection = StreamlineAtts_forward.Forward
+    StreamlineAtts_forward.legendFlag = 0
+    visit.SetPlotOptions(StreamlineAtts_forward)
+
+    visit.AddPlot("Streamline", "Omega_i_alpha_fitted", 1, 0)
+    StreamlineAtts_backward = visit.StreamlineAttributes()
+    StreamlineAtts_backward.sourceType = StreamlineAtts_backward.SpecifiedPointList
+    StreamlineAtts_backward.SetPointList(points_backward)
+    StreamlineAtts_backward.coloringMethod = StreamlineAtts_backward.Solid
+    StreamlineAtts_backward.colorTableName = "Default"
+    StreamlineAtts_backward.singleColor = backward_color
+    StreamlineAtts_backward.integrationDirection = StreamlineAtts_backward.Backward
+    StreamlineAtts_backward.legendFlag = 0
+    visit.SetPlotOptions(StreamlineAtts_backward)
+
+    return StreamlineAtts_forward, StreamlineAtts_backward
+
+
+
+
 def setup_field_line(visit, center=(0.01, 0.01, 0.249),
                      outer_radius=0.01):
     r"""
@@ -361,6 +466,13 @@ def main():
     except:
         pass
 
+
+    if args.interactive_session:
+       define_expressions(visit, args.alpha_constant)
+       visit.OpenDatabase(database_prefix + args.database_postfix)
+       visit.OpenGUI()
+       return
+       
     output_path = out_dir + '/' + args.output_prefix
     define_expressions(visit, args.alpha_constant)
     visit.OpenDatabase(database_prefix + args.database_postfix)
@@ -412,7 +524,7 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate time step plots of canonical flux tubes.")
     parser.add_argument('--database_prefix', help='path to visit database i.e. vtk files',
-                        default='/Users/vonderlinden2/rsx_analysis/writing_to_vtk/output/')
+                        default='/home/jensv/rsx/jens_analysis/writing_to_vtk/output/')
     parser.add_argument('--database_postfix', help='path to visit database i.e. vtk files',
                         default='/Bdot_triple_probe_quantities*.vtk database')
     parser.add_argument('database_date', help='date of data run YYYY-MM-DD-mm-ss')
@@ -423,13 +535,14 @@ def parse_args():
     parser.add_argument('--start_time_point', help='time point of first output frame', default=0)
     parser.add_argument('--end_time_point', help='time point of last output frame', default=229)
     parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
-                        default='/Users/vonderlinden2/rsx_analysis/centroid_fitting/output/2016-08-12/field_nulls.txt')
+                        default='/home/jensv/rsx/jens_analysis/centroid_fitting/output/2016-08-12/field_nulls.txt')
     parser.add_argument('--time_scale', help='time scale of time steps', default=0.068)
     parser.add_argument('--alpha_constant', help='value of spatially constant alpha', type=int, default=8.1e5)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--electron', help='plot canonical electron flux tubes', action='store_true', default=True)
     group.add_argument('--ion', help='plot canonical ion flux tubes', action='store_true', default=False)
     group.add_argument('--ion_forward_backward', help='plot canonical ion flux tubes', action='store_true', default=False)
+    parser.add_argument('--interactive_session', action='store_true', default=False)
     args = parser.parse_args()
     return args
 
