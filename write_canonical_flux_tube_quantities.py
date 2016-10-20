@@ -32,12 +32,16 @@ import read_from_sql
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-import pdb
+#import pdb
 
 
 def main(args):
     r"""
     """
+
+    assert (args.task == 'write_to_vtk' or
+            args.task == 'write_to_npz'), 'Invalid task: ' + args.task
+
     now = datetime.now().strftime("%Y-%m-%d-%H-%M")
     out_dir = '../output/' + now
     try:
@@ -89,7 +93,6 @@ def main(args):
     ##u_i_y = u_i_y[3:, :]
     ##u_i_z = u_i_z[3:, :]
 
-
     mesh = np.meshgrid(np.linspace(x_min, x_max, np.ceil((x_max-x_min)/args.spatial_increment)),
                        np.linspace(y_min, y_max, np.ceil((y_max-y_min)/args.spatial_increment)),
                        np.linspace(z_min, z_max, np.ceil((z_max-z_min)/args.spatial_increment)))
@@ -101,7 +104,9 @@ def main(args):
 
     quantity_names = ['B_x', 'B_y', 'B_z',
                       'B_norm_x', 'B_norm_y', 'B_norm_z',
-                      'j_x', 'j_y', 'j_z', 'n', 'Te',
+                      'j_x', 'j_y', 'j_z',
+                      'j_unfiltered_x', 'j_unfiltered_y', 'j_unfiltered_z'
+                      'n', 'Te',
                       'u_i_term1_x', 'u_i_term1_y', 'u_i_term1_z',
                       'u_e_norm_x', 'u_e_norm_y', 'u_e_norm_z',
                       'w_i_term1_x', 'w_i_term1_y', 'w_i_term1_z',
@@ -141,6 +146,8 @@ def main(args):
         current = current_on_mesh([bx_derivative,
                                    by_derivative,
                                    bz_derivative])
+        current_unfiltered = np.array(current)
+
         b_field, b_field_norm = b_field_on_mesh([bx_interpolator,
                                                  by_interpolator,
                                                  bz_interpolator], mesh_wo_edges, bias=args.bias_field_magnitude)
@@ -159,9 +166,7 @@ def main(args):
         for direction in xrange(len(current)):
             current[direction] = boxcar_filter_quantity_mesh(current[direction], args.filter_width)
 
-        current_filtered_x = current[0]
-        current_filtered_y = current[1]
-        current_filtered_z = current[2]
+        current_filtered = np.array([current[0], current[1], current[2]])
     
         density_constant = args.density_constant_factor*np.ones(density.shape)
 
@@ -265,7 +270,8 @@ def main(args):
             ion_vorticity_term_2_alpha_both_planes[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_both_planes[direction],
                                                                                 args.filter_width)
 
-        fields = (list(b_field) + list(b_field_norm) + list(current) +
+        fields = (list(b_field) + list(b_field_norm) +
+                  list(current_unfiltered) + list(current) +
                   [density] + [temperature] +
                   list(ion_velocity_term_1) + list(ion_velocity_term_2) +
                   list(ion_vorticity_term_1) + list(ion_vorticity_term_2) +
@@ -286,10 +292,15 @@ def main(args):
         # numpy_archive_name = out_dir + args.output_prefix + str(time_point).zfill(4) + '.npz'
         # save_to_numpy_mesh(mesh_wo_edges, fields[5:9], quantity_names[5:9], numpy_archive_name)
 
-        x, y, z, variables = prepare_for_rectilinear_grid(mesh_wo_edges, fields,
-                                                          quantity_names)
+        if args.task == 'write_to_vtk':
+            x, y, z, variables = prepare_for_rectilinear_grid(mesh_wo_edges, fields,
+                                                              quantity_names)
 
-        write_fields_and_currents_to_structured_mesh(now, args.output_prefix, x, y, z, variables, time_point)
+            write_fields_and_currents_to_structured_mesh(now, args.output_prefix, x, y, z, variables, time_point)
+
+        if args.task == 'write_to_npz':
+            write_to_compressed_npz(b_field, current_unfiltered, current_filtered, mesh_wo_edges,
+                                    args.output_prefix, time_point, now, args.filter_width)
 
 
 def parse_args():
@@ -340,15 +351,29 @@ def parse_args():
     parser.add_argument('--bias_field_magnitude', help='magnitude of axial bias magnetic field', default=0.02)
     parser.add_argument('--smooth_factor_alpha_z03_fit', help='FITPACK smooth parameter alpha fit in 30cm plane', default=8e10)
     parser.add_argument('--smooth_factor_alpha_z04_fit', help='FITPACK smooth parameter alpha fit in 40cm plane', default=7e10)
+    parser.add_argument('--task', help='Either write_to_vtk or write_to_npz', default='write_to_vtk')
     args = parser.parse_args()
     return args
+
+
+def write_to_compressed_npz(b_field, current_unfiltered, current_filtered,
+                            mesh_wo_edges, file_prefix, time_point, date,
+                            filter_width):
+    r"""
+    """
+    file_name = '../output/' + date + '/' + file_prefix + str(time_point).zfill(4) + '.npz'
+    np.savez_compressed(file_name, b_field=b_field,
+                        current_unfiltered=current_unfiltered,
+                        current_filtered=current_filtered,
+                        mesh=mesh_wo_edges,
+                        filter_width=np.asarray([filter_width]))
 
 
 def fit_line(x1, x2, y1, y2):
     r"""
     """
     m = (y2 - y1)/(x2 - x1)
-    y0 = y1 - m*x1 
+    y0 = y1 - m*x1
     return m, y0
 
 
@@ -833,6 +858,7 @@ def bdot_probe_extent():
     z_max = 0.416
     return x_min, x_max, y_min, y_max, z_min, z_max
 
+
 def joint_bdot_tp_extent():
     r"""
     """
@@ -843,6 +869,7 @@ def joint_bdot_tp_extent():
     z_min = 0.249
     z_max = 0.416
     return x_min, x_max, y_min, y_max, z_min, z_max
+
 
 def joint_mach_bdot_tp_extent():
     r"""
