@@ -18,6 +18,7 @@ import argparse
 
 tan = (209, 178, 111, 255)
 olive = (110, 117, 14, 255)
+red = (255, 0, 0, 255)
 green = (0, 154, 0, 255)
 
 def define_expressions(visit, alpha=8.1e5):
@@ -31,12 +32,38 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineVectorExpression("B_para", "{0, 0, B_z}")
     visit.DefineScalarExpression("B_para_scalar", "B_z")
 
-    visit.DefineVectorExpression("J", "{j_x, j_y, j_z}")
-    visit.DefineVectorExpression("J_unfiltered", "{j_unfiltered_x, j_unfiltered_y, j_unfiltered_z}")
-    visit.DefineScalarExpression("J_mag", "sqrt(j_x^2 + j_y^2 + j_z^2)")
-    visit.DefineVectorExpression("J_perp", "{j_x, j_y, 0}")
-    visit.DefineVectorExpression("J_para", "{0, 0, j_z}")
-    visit.DefineScalarExpression("J_para_scalar", "j_z")
+    visit.DefineVectorExpression("J_smooth", "{j_x, j_y, j_z}")
+    visit.DefineScalarExpression("J_smooth_mag", "sqrt(j_x^2 + j_y^2 + j_z^2)")
+    visit.DefineVectorExpression("J_smooth_perp", "{j_x, j_y, 0}")
+    visit.DefineVectorExpression("J_smooth_para", "{0, 0, j_z}")
+    visit.DefineScalarExpression("J_smooth_para_scalar", "j_z")
+
+    visit.DefineVectorExpression("J_raw", "{j_raw_x, j_raw_y, j_raw_z}")
+    visit.DefineScalarExpression("J_raw_mag", "sqrt(j_raw_x^2 +" +
+                                                   "j_raw_y^2 +" +
+                                                   "j_raw_z^2)")
+    visit.DefineVectorExpression("J_raw_perp", "{j_raw_x, j_raw_y, 0}")
+
+
+    normalize_scalar(visit, "Te_raw", "Te_raw_normalized")
+    normalize_scalar(visit, "Te", "Te_smooth_normalized")
+
+    visit.DefineVectorExpression("J_raw_filtered_by_Te",
+                                  "J_raw * Te_raw_normalized")
+    visit.DefineVectorExpression("J_raw_filtered_by_Te^2",
+                                  "J_raw * Te_raw_normalized^2")
+    visit.DefineVectorExpression("J_raw_filtered_by_Te^3",
+                                  "J_raw * Te_raw_normalized^3")
+    visit.DefineVectorExpression("J_raw_filtered_by_Te^4",
+                                  "J_raw * Te_raw_normalized^4")
+    visit.DefineVectorExpression("J_raw_filtered_by_Te_smooth",
+                                  "J_raw * Te_smooth_normalized")
+    visit.DefineVectorExpression("J_raw_filtered_by_Te_smooth^2",
+                                  "J_raw * Te_smooth_normalized^2")
+    visit.DefineVectorExpression("J_raw_filtered_by_Te_smooth^3",
+                                  "J_raw * Te_smooth_normalized^3")
+    visit.DefineVectorExpression("J_raw_filtered_by_Te_smooth^4",
+                                  "J_raw * Te_smooth_normalized^4")
 
     visit.DefineVectorExpression("u_e_norm", "{u_e_norm_x, u_e_norm_y, "
                                  "u_e_norm_z}")
@@ -45,11 +72,15 @@ def define_expressions(visit, alpha=8.1e5):
                                  "dot(u_e, {0, 1, 0}), 0}")
     visit.DefineScalarExpression("u_e_para_scalar", "dot(u_e, {0, 0, 1})")
 
-    visit.DefineVectorExpression("u_e_fitted_alpha_z03", "{u_e_x_fitted_alpha_z03, u_e_y_fitted_alpha_z03, "
-                                 "u_e_z_fitted_alpha_z03}")
-    visit.DefineVectorExpression("u_e_fitted_alpha_z04", "{u_e_x_fitted_alpha_z04, u_e_y_fitted_alpha_z04, "
-                                 "u_e_z_fitted_alpha_z04}")
-    visit.DefineVectorExpression("u_e_fitted_alpha_both_planes", "{u_e_x_fitted_alpha_both_planes, u_e_y_fitted_alpha_both_planes, "
+    visit.DefineVectorExpression("u_e_fitted_alpha_z03", "{u_e_x_fitted_alpha_z03, " +
+                                                          "u_e_y_fitted_alpha_z03, " +
+                                                          "u_e_z_fitted_alpha_z03}")
+    visit.DefineVectorExpression("u_e_fitted_alpha_z04", "{u_e_x_fitted_alpha_z04, "
+                                                          "u_e_y_fitted_alpha_z04, "
+                                                          "u_e_z_fitted_alpha_z04}")
+    visit.DefineVectorExpression("u_e_fitted_alpha_both_planes",
+                                 "{u_e_x_fitted_alpha_both_planes, "
+                                 "u_e_y_fitted_alpha_both_planes, "
                                  "u_e_z_fitted_alpha_both_planes}")
 
     visit.DefineVectorExpression("u_i_term1", "{u_i_term1_x, u_i_term1_y, "
@@ -79,8 +110,10 @@ def define_expressions(visit, alpha=8.1e5):
                                  "w_i_term2_y_fitted_alpha_z03, w_i_term2_z_fitted_alpha_z03}")
     visit.DefineVectorExpression("omega_i_term2_fitted_alpha_z04", "{w_i_term2_x_fitted_alpha_z04,"
                                  "w_i_term2_y_fitted_alpha_z04, w_i_term2_z_fitted_alpha_z04}")
-    visit.DefineVectorExpression("omega_i_term2_fitted_alpha_both_planes", "{w_i_term2_x_fitted_alpha_both_planes,"
-                                 "w_i_term2_y_fitted_alpha_both_planes, w_i_term2_z_fitted_alpha_both_planes}")
+    visit.DefineVectorExpression("omega_i_term2_fitted_alpha_both_planes",
+                                 "{w_i_term2_x_fitted_alpha_both_planes, "
+                                 "w_i_term2_y_fitted_alpha_both_planes, "
+                                 "w_i_term2_z_fitted_alpha_both_planes}")
 
 
     visit.DefineVectorExpression("u_i", "u_i_term1 + u_e")
@@ -92,7 +125,8 @@ def define_expressions(visit, alpha=8.1e5):
 
     visit.DefineVectorExpression("u_i_fitted_alpha_z03", "u_i_term1 + u_e_fitted_alpha_z03")
     visit.DefineVectorExpression("u_i_fitted_alpha_z04", "u_i_term1 + u_e_fitted_alpha_z04")
-    visit.DefineVectorExpression("u_i_fitted_alpha_both_planes", "u_i_term1 + u_e_fitted_alpha_both_planes")
+    visit.DefineVectorExpression("u_i_fitted_alpha_both_planes", "u_i_term1 + "
+                                 "u_e_fitted_alpha_both_planes")
 
     visit.DefineVectorExpression("omega_i", "omega_i_term1 + "
                                  "omega_i_term2")
@@ -127,33 +161,66 @@ def define_expressions(visit, alpha=8.1e5):
                                  str(elementary_charge) + "*omega_i_fitted_alpha_both_planes")
 
 
-def launch_points(center, plane=0.249, num_inner=80, num_outer=60):
+def normalize_scalar(visit, scalar_name,
+                     normalized_scalar_name):
+    r"""
+    Determine max of scalar.
+    """
+    visit.AddPlot("Pseudocolor", scalar_name)
+    visit.DrawPlots()
+    visit.Query("Max")
+    max = visit.GetQueryOutputValue()
+    visit.DefineScalarExpression(normalized_scalar_name,
+                                 "%s - %g" % (scalar_name, max))
+    visit.DeleteActivePlots()
+
+
+def launch_points_inner_outer(center, plane=0.249,
+                              radius_inner=0.005, radius_outer=0.01,
+                              num_inner=80, num_outer=60):
     r"""
     Calculate points on a circle outline for a given center point.
     """
-    thetas = np.linspace(0, 3./4.*np.pi, num_outer)
-    thetas = np.concatenate((thetas, np.linspace(5./4.*np.pi, 2.*np.pi,
-                                                 num_outer)))
-    x_outer = 0.01 * np.cos(thetas) + center[0]
-    y_outer = 0.01 * np.sin(thetas) + center[1]
-    z_outer = plane * np.ones((x_outer.size))
-    points_outer = np.empty((x_outer.size + y_outer.size + z_outer.size))
-    points_outer[0::3] = x_outer
-    points_outer[1::3] = y_outer
-    points_outer[2::3] = z_outer
-    points_outer = tuple(points_outer)
+    thetas = circle_with_cut_thetas(num_points)
+    points_outer = launch_points(center, thetas, radius=radius_outer,
+                                 plane=plane)
 
-    thetas = np.linspace(0, 2.*np.pi, num_inner)
-    x_inner = 0.005 * np.cos(thetas) + center[0]
-    y_inner = 0.005 * np.sin(thetas) + center[1]
-    z_inner = plane * np.ones(x_inner.size)
-    points_inner = np.empty((x_inner.size + y_inner.size + z_inner.size))
-    points_inner[0::3] = x_inner
-    points_inner[1::3] = y_inner
-    points_inner[2::3] = z_inner
-    points_inner = tuple(points_inner)
+    thetas = full_circle_thetas(num_points)
+    points_inner = launch_points(center, thetas, radius=radius_inner,
+                                 plane=plane)
 
     return points_outer, points_inner
+
+
+def full_circle_thetas(num_points):
+    r"""
+    """
+    thetas = np.linspace(0, 2.*np.pi, num_points)
+    return thetas
+
+
+def circle_with_cut_thetas(num_points):
+    r"""
+    """
+    thetas = np.linspace(0, 3./4.*np.pi, num_points)
+    thetas = np.concatenate((thetas, np.linspace(5./4.*np.pi, 2.*np.pi,
+                                                 num_points)))
+    return thetas
+
+
+def launch_points(center, thetas, radius=0.03,
+                  plane=0.249):
+    r"""
+    """
+    x_points = radius * np.cos(thetas) + center[0]
+    y_points = radius * np.sin(thetas) + center[1]
+    z_points = plane * np.ones(x_points.size)
+    points = np.empty((x_points.size + y_points.size + z_points.size))
+    points[0::3] = x_points
+    points[1::3] = y_points
+    points[2::3] = z_points
+    points = tuple(points)
+    return points
 
 
 def setup_current_pseudocolor(visit, colortable="Greens", max_val=None,
@@ -190,7 +257,7 @@ def setup_massless_electron_canonical_flux_tubes(visit, points_outer,
                                                  points_inner):
     r"""
     Setup two massless electron canonical flux tubes i.e. magnetic flux tubes.
-    Inteteded to be inner and outer flux tubes.
+    Intended to be inner and outer flux tubes.
     """
     visit.AddPlot("Streamline", "B", 1, 0)
     StreamlineAtts_outer = visit.StreamlineAttributes()
@@ -280,38 +347,33 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
     return StreamlineAtts_forward, StreamlineAtts_backward
 
 
-def setup_current_backward_stream(visit, launch_points, color=green):
+def setup_backward_and_B_stream(visit, name, launch_points,
+                                B_launch_points, color=green, B_color=red):
     r"""
     """
-    visit.AddPlot("Streamline", "J", 1, 0)
-    StreamlineAtts_current_backward = visit.StreamlineAttributes()
-    StreamlineAtts_current_backward.sourceType = StreamlineAtts_current_backward.SpecifiedPointList
-    StreamlineAtts_current_backward.SetPointList(launch_points)
-    StreamlineAtts_current_backward.coloringMethod = StreamlineAtts_current_backward.Solid
-    StreamlineAtts_current_backward.colorTableName = "Default"
-    StreamlineAtts_current_backward.singleColor = color
-    StreamlineAtts_current_backward.integrationDirection = StreamlineAtts_current_backward.Backward
-    StreamlineAtts_current_backward.legendFlag = 0
-    visit.SetPlotOptions(StreamlineAtts_current_backward)
+    visit.AddPlot("Streamline", name, 1, 0)
+    StreamlineAtts_backward = visit.StreamlineAttributes()
+    StreamlineAtts_backward.sourceType = StreamlineAtts_backward.SpecifiedPointList
+    StreamlineAtts_backward.SetPointList(launch_points)
+    StreamlineAtts_backward.coloringMethod = StreamlineAtts_backward.Solid
+    StreamlineAtts_backward.colorTableName = "Default"
+    StreamlineAtts_backward.singleColor = color
+    StreamlineAtts_backward.integrationDirection = StreamlineAtts_backward.Backward
+    StreamlineAtts_backward.legendFlag = 0
+    visit.SetPlotOptions(StreamlineAtts_backward)
 
-    return StreamlineAtts_current_backward
+    visit.AddPlot("Streamline", B, 1, 0)
+    StreamlineAtts_B = visit.StreamlineAttributes()
+    StreamlineAtts_B.sourceType = StreamlineAtts_B.SpecifiedPointList
+    StreamlineAtts_B.SetPointList(B_launch_points)
+    StreamlineAtts_B.coloringMethod = StreamlineAtts_B.Solid
+    StreamlineAtts_B.colorTableName = "Default"
+    StreamlineAtts_B.singleColor = B_color
+    StreamlineAtts_B.integrationDirection = StreamlineAtts_B.Backward
+    StreamlineAtts_B.legendFlag = 0
+    visit.SetPlotOptions(StreamlineAtts_B)
 
-
-def setup_current_unfiltered_backward_stream(visit, launch_points, color=green):
-    r"""
-    """
-    visit.AddPlot("Streamline", "J_unfiltered", 1, 0)
-    StreamlineAtts_current_unfiltered_backward = visit.StreamlineAttributes()
-    StreamlineAtts_current_unfiltered_backward.sourceType = StreamlineAtts_current_unfiltered_backward.SpecifiedPointList
-    StreamlineAtts_current_unfiltered_backward.SetPointList(launch_points)
-    StreamlineAtts_current_unfiltered_backward.coloringMethod = StreamlineAtts_current_unfiltered_backward.Solid
-    StreamlineAtts_current_unfiltered_backward.colorTableName = "Default"
-    StreamlineAtts_current_unfiltered_backward.singleColor = color
-    StreamlineAtts_current_unfiltered_backward.integrationDirection = StreamlineAtts_current_unfiltered_backward.Backward
-    StreamlineAtts_current_unfiltered_backward.legendFlag = 0
-    visit.SetPlotOptions(StreamlineAtts_current_unfiltered_backward)
-
-    return StreamlineAtts_current_unfiltered_backward
+    return StreamlineAtts_backward, StreamlineAtts_B
 
 
 def setup_forward_backward_alpha_fitted_ion_canonical_flux_tubes(visit, points_foward,
@@ -323,7 +385,6 @@ def setup_forward_backward_alpha_fitted_ion_canonical_flux_tubes(visit, points_f
     direction, one integrating in the backward direction.
     """
     visit.AddPlot("Streamline", "Omega_i_alpha_fitted", 1, 0)
-
     StreamlineAtts_forward = visit.StreamlineAttributes()
     StreamlineAtts_forward.sourceType = StreamlineAtts_forward.SpecifiedPointList
     StreamlineAtts_forward.SetPointList(points_foward)
@@ -346,8 +407,6 @@ def setup_forward_backward_alpha_fitted_ion_canonical_flux_tubes(visit, points_f
     visit.SetPlotOptions(StreamlineAtts_backward)
 
     return StreamlineAtts_forward, StreamlineAtts_backward
-
-
 
 
 def setup_field_line(visit, center=(0.01, 0.01, 0.249),
@@ -472,26 +531,41 @@ def main():
        visit.OpenDatabase(database_prefix + args.database_postfix)
        visit.OpenGUI()
        return
-       
+
     output_path = out_dir + '/' + args.output_prefix
     define_expressions(visit, args.alpha_constant)
     visit.OpenDatabase(database_prefix + args.database_postfix)
     field_nulls = np.loadtxt(args.field_nulls)
     PseudocolorAtts, SliceAtts = setup_current_pseudocolor(visit, max_val=args.current_max, min_val=args.current_min)
-    points_outer, points_inner = launch_points(field_nulls[0])
+    points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
     AnnotationAtts = setup_annotations(visit, time_scale=args.time_scale)
 
     if args.ion_forward_backward:
+        points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
         stream_line_func = setup_forward_backward_ion_canonical_flux_tubes
     elif args.ion:
+        points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
         stream_line_func = setup_inner_outer_ion_canonical_flux_tubes
-    else:
+    elif args.electron:
+        points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
         stream_line_func = setup_massless_electron_canonical_flux_tubes
         points_outer = points_inner
-
+    elif args.current_and_B:
+        stream_line_func = setup_backward_and_B_stream
+        current_thetas = full_circle_thetas(20)
+        B_thetas = full_circle_thetas(10)
+        current_launch_points = launch_points(field_nulls[0],
+                                              current_thetas,
+                                              radius=0.003)
+        B_launch_points = launch_points(field_nulls[0],
+                                        B_thetas,
+                                        radius=0.005)
+        params = {'visit': visit, 'name': args.current_to_use,
+                  'launch_points': current_launch_points,
+                  'B_launch_points': B_launch_points}
 
     (StreamlineAtts_flux_1,
-     StreamlineAtts_flux_2) = stream_line_func(visit, points_outer, points_inner)
+     StreamlineAtts_flux_2) = stream_line_func(**params)
 
     set_default_view(visit)
     visit.DrawPlots()
@@ -503,10 +577,18 @@ def main():
         save_atts.fileName = output_path + str(time_point).zfill(4) + ending
         visit.SetSaveWindowAttributes(save_atts)
 
-        points_outer, points_inner = launch_points(field_nulls[time_point])
+        points_outer, points_inner = launch_points_inner_outer(field_nulls[time_point])
 
         if args.ion_forward_backward:
             points_outer = points_inner
+
+        if args.currentr_and_B:
+            points_inner = launch_points(field_nulls[time_point],
+                                         current_thetas,
+                                         radius=0.003)
+            points_outer = launch_points(field_nulls[time_point],
+                                         current_thetas,
+                                         radius=0.003)
 
         visit.SetActivePlots(1)
         StreamlineAtts_flux_1.SetPointList(points_outer)
@@ -538,13 +620,15 @@ def parse_args():
                         default='/home/jensv/rsx/jens_analysis/centroid_fitting/output/2016-08-12/field_nulls.txt')
     parser.add_argument('--time_scale', help='time scale of time steps', default=0.068)
     parser.add_argument('--alpha_constant', help='value of spatially constant alpha', type=int, default=8.1e5)
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--electron', help='plot canonical electron flux tubes', action='store_true', default=True)
-    group.add_argument('--ion', help='plot canonical ion flux tubes', action='store_true', default=False)
-    group.add_argument('--ion_forward_backward', help='plot canonical ion flux tubes', action='store_true', default=False)
+    task = parser.add_mutually_exclusive_group()
+    task.add_argument('--electron', help='plot canonical electron flux tubes', action='store_true', default=True)
+    task.add_argument('--ion', help='plot canonical ion flux tubes', action='store_true', default=False)
+    task.add_argument('--ion_forward_backward', help='plot canonical ion flux tubes', action='store_true', default=False)
+    task.add_arguemnt('--current, help=plot thin current flux tube surrounded by electron / magnetic flux tube', action='store_True' ,default=False)
     parser.add_argument('--interactive_session', action='store_true', default=False)
+    parser.add_argument('current_to_use', default='J_raw')
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
-    main() 
+    main()
