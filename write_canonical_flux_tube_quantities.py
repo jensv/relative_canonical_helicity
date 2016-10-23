@@ -105,8 +105,11 @@ def main(args):
     quantity_names = ['B_x', 'B_y', 'B_z',
                       'B_norm_x', 'B_norm_y', 'B_norm_z',
                       'j_x', 'j_y', 'j_z',
-                      'j_unfiltered_x', 'j_unfiltered_y', 'j_unfiltered_z'
+                      'j_raw_x', 'j_raw_y', 'j_raw_z',
                       'n', 'Te',
+                      'n_plane_normalized', 'Te_plane_normalized',
+                      'n_raw', 'Te_raw',
+                      'n_raw_plane_normalized', 'Te_raw_plane_normalized',
                       'u_i_term1_x', 'u_i_term1_y', 'u_i_term1_z',
                       'u_e_norm_x', 'u_e_norm_y', 'u_e_norm_z',
                       'w_i_term1_x', 'w_i_term1_y', 'w_i_term1_z',
@@ -158,10 +161,17 @@ def main(args):
         current = np.asarray(current)
         density = np.asarray(density)
         temperature = np.asarray(temperature)
+        density_unfiltered_plane_normalized = normalize_scalar_by_plane(density)
+        temperature_unfiltered_plane_normalized = normalize_scalar_by_plane(temperature)
+        density_unfiltered = np.array(density)
+        temperature_unfiltered = np.array(temperature)
         b_field_norm = np.asarray(b_field_norm)
 
         density = boxcar_filter_quantity_mesh(density, args.filter_width)
         temperature = boxcar_filter_quantity_mesh(temperature, args.filter_width)
+
+        density_smoothed_plane_normalized = normalize_scalar_by_plane(density)
+        temperature_smoothed_plane_normalized = normalize_scalar_by_plane(temperature)
 
         for direction in xrange(len(current)):
             current[direction] = boxcar_filter_quantity_mesh(current[direction], args.filter_width)
@@ -170,8 +180,8 @@ def main(args):
     
         density_constant = args.density_constant_factor*np.ones(density.shape)
 
-        ion_velocity_term_1 = calc_ion_velocity_term_1(current, density, q_e)
-        ion_velocity_term_1_constant_density = calc_ion_velocity_term_1(current, density_constant, q_e)
+        ion_velocity_term_1 = calc_ion_velocity_term_1(current_unfiltered, density, q_e)
+        ion_velocity_term_1_constant_density = calc_ion_velocity_term_1(current_unfiltered, density_constant, q_e)
 
 
         mach_y_interpolator = mach_y_interpolators[time_point]
@@ -251,28 +261,35 @@ def main(args):
         ion_velocity_term_2_alpha_z04 = calc_ion_velocity_term_2(b_field_norm, alpha_fitted_z04)
         ion_velocity_term_2_alpha_both_planes = calc_ion_velocity_term_2(b_field_norm, alpha_fitted_both_planes)
 
-        ion_vorticity_term_1 = calc_ion_vorticity_term_1(current, density, q_e, mesh_wo_edges)
-        ion_vorticity_term_1_constant_density = calc_ion_vorticity_term_1(current, density_constant, q_e, mesh_wo_edges)
+        ion_vorticity_term_1 = calc_ion_vorticity_term_1(current_unfiltered, density_unfiltered, q_e, mesh_wo_edges)
+        ion_vorticity_term_1_constant_density = calc_ion_vorticity_term_1(current_unfiltered, density_constant, q_e, mesh_wo_edges)
         ion_vorticity_term_2 = calc_ion_vorticity_term_2(b_field_norm, args.alpha, mesh_wo_edges)
         ion_vorticity_term_2_alpha_z03 = calc_ion_vorticity_term_2(b_field_norm, alpha_fitted_z03, mesh_wo_edges)
         ion_vorticity_term_2_alpha_z04 = calc_ion_vorticity_term_2(b_field_norm, alpha_fitted_z04, mesh_wo_edges)
         ion_vorticity_term_2_alpha_both_planes = calc_ion_vorticity_term_2(b_field_norm, alpha_fitted_both_planes, mesh_wo_edges)
 
 
-        for direction in xrange(len(ion_vorticity_term_1)):
-            ion_vorticity_term_1[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_1[direction], args.filter_width)
-            ion_vorticity_term_1_constant_density[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_1_constant_density[direction], args.filter_width)
-            ion_vorticity_term_2[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2[direction], args.filter_width)
-            ion_vorticity_term_2_alpha_z03[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_z03[direction],
-                                                                                args.filter_width)
-            ion_vorticity_term_2_alpha_z04[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_z04[direction],
-                                                                                args.filter_width)
-            ion_vorticity_term_2_alpha_both_planes[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_both_planes[direction],
-                                                                                args.filter_width)
+        #for direction in xrange(len(ion_vorticity_term_1)):
+        #    ion_vorticity_term_1[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_1[direction], args.filter_width)
+        #    ion_vorticity_term_1_constant_density[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_1_constant_density[direction], args.filter_width)
+        #    ion_vorticity_term_2[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2[direction], args.filter_width)
+        #    ion_vorticity_term_2_alpha_z03[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_z03[direction],
+        #                                                                        args.filter_width)
+        #    ion_vorticity_term_2_alpha_z04[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_z04[direction],
+        #                                                                        args.filter_width)
+        #    ion_vorticity_term_2_alpha_both_planes[direction] = boxcar_filter_quantity_mesh(ion_vorticity_term_2_alpha_both_planes[direction],
+        #                                                                        args.filter_width)
+
+        temperature_norm = temperature/np.nanmax(temperature)
+        temperature_unfiltered_norm = (temperature_unfiltered/
+                                       np.nanmax(temperature_unfiltered))
 
         fields = (list(b_field) + list(b_field_norm) +
-                  list(current_unfiltered) + list(current) +
+                  list(current) + list(current_unfiltered) +
                   [density] + [temperature] +
+                  [density_smoothed_plane_normalized] + [temperature_smoothed_plane_normalized] +
+                  [density_unfiltered] + [temperature_unfiltered] +
+                  [density_unfiltered_plane_normalized] + [temperature_unfiltered_plane_normalized] +
                   list(ion_velocity_term_1) + list(ion_velocity_term_2) +
                   list(ion_vorticity_term_1) + list(ion_vorticity_term_2) +
                   list(ion_velocity_term_1_constant_density) +
@@ -335,7 +352,7 @@ def parse_args():
     parser.add_argument('--mach_time_steps', help='# of time steps to extract from one gyration', type=int,
                         default=250)
     parser.add_argument('--shot_database', help='path to shot database',
-                        default='/Users/vonderlinden2/rsx_analysis/shots_database/source/shots.db')
+                        default='/home/jensv/rsx/jens_analysis/shots_database/source/shots.db')
     parser.add_argument('--table_name', help='name of sql table',
                         default='Shots')
     parser.add_argument('--min_spectral',
@@ -518,6 +535,13 @@ def prepare_mach_probe_data(args):
     return mach_y_all_planes, mach_z_all_planes
 
 
+def normalize_scalar_by_plane(scalar):
+    r"""
+    """
+    maxes = np.nanmax(np.nanmax(scalar, axis=0), axis=0)
+    return scalar / maxes[None, None, :]
+
+
 def prepare_idl_quantity(name, planes, bounds=None):
     r"""
     """
@@ -586,6 +610,18 @@ def remove_nan_points(measurements):
     return measurements
 
 
+def remove_positions(measurements, positions_to_remove):
+    r"""
+    """
+    for key in ['x_out', 'y_out', 'z_out']:
+        measurements[key] = np.delete(measurements[key],
+                                      positions_to_remove)
+    for key in ['std', 'a_out']:
+        measurements[key] = np.delete(measurements[key],
+                                      positions_to_remove, axis=1)
+    return measurements
+
+
 def prepare_for_unstructured_vtk(measurements, quantity_name):
     r"""
     """
@@ -650,6 +686,9 @@ def save_idl_quantity_to_unstructured_grids(idl_quantity_name,
                                               y_min=y_min, y_max=y_max,
                                               z_min=z_min, z_max=z_max)
     assert len(all_planes['x_out']) == len(all_planes['y_out']) == len(all_planes['z_out'])
+
+    ## disable write to unstructured grid file.
+    ##
     #(points,
     # connectivity,
     # variables_all_time) = prepare_for_unstructured_vtk(all_planes, visit_quantity_name)
@@ -769,6 +808,8 @@ def prepare_for_rectilinear_grid(mesh, quantities, quantity_names):
     x = tuple(np.unique(mesh[0]))
     y = tuple(np.unique(mesh[1]))
     z = tuple(np.unique(mesh[2]))
+    print 'names length:', len(quantity_names)
+    print 'quantities length:', len(quantities)
     variables = [(quantity_names[index], 1, 1,
                   tuple(np.swapaxes(np.swapaxes(quantities[index], 1, 2), 0, 1).ravel()))
                  for index in xrange(len(quantities))]
