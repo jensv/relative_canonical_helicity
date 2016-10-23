@@ -13,11 +13,11 @@ from scipy.interpolate import griddata
 from collections import MutableSequence
 
 import sys
-sys.path.append('/Users/vonderlinden2/rsx_analysis/read_from_sql')
+sys.path.append('/home/jensv/rsx/jens_analysis/read_from_sql')
 import read_from_sql
-sys.path.append('/Users/vonderlinden2/rsx_analysis/mach_probe_analysis')
+sys.path.append('/home/jensv/rsx/jens_analysis/mach_probe_analysis')
 import ion_current_to_mach_number as ic_to_mach
-sys.path.append('/Users/vonderlinden2/rsx_analysis/time_alignment/source')
+sys.path.append('/home/jensv/rsx/jens_analysis/time_alignment/source')
 import absolute_times as at
 
 
