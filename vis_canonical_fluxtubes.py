@@ -181,11 +181,11 @@ def launch_points_inner_outer(center, plane=0.249,
     r"""
     Calculate points on a circle outline for a given center point.
     """
-    thetas = circle_with_cut_thetas(num_points)
+    thetas = circle_with_cut_thetas(num_outer)
     points_outer = launch_points(center, thetas, radius=radius_outer,
                                  plane=plane)
 
-    thetas = full_circle_thetas(num_points)
+    thetas = full_circle_thetas(num_inner)
     points_inner = launch_points(center, thetas, radius=radius_inner,
                                  plane=plane)
 
@@ -228,7 +228,7 @@ def setup_current_pseudocolor(visit, colortable="Greens", max_val=None,
     r"""
     Setup pseudocolor current plot.
     """
-    visit.AddPlot("Pseudocolor", "J_mag", 1, 0)
+    visit.AddPlot("Pseudocolor", "J_raw_mag", 1, 0)
     PseudocolorAtts = visit.PseudocolorAttributes()
     PseudocolorAtts.scaling = PseudocolorAtts.Linear
     PseudocolorAtts.limitsMode = PseudocolorAtts.OriginalData
@@ -351,6 +351,18 @@ def setup_backward_and_B_stream(visit, name, launch_points,
                                 B_launch_points, color=green, B_color=red):
     r"""
     """
+    visit.AddPlot("Streamline", 'B', 1, 0)
+    StreamlineAtts_B = visit.StreamlineAttributes()
+    StreamlineAtts_B.sourceType = StreamlineAtts_B.SpecifiedPointList
+    StreamlineAtts_B.SetPointList(B_launch_points)
+    StreamlineAtts_B.coloringMethod = StreamlineAtts_B.Solid
+    StreamlineAtts_B.colorTableName = "Default"
+    StreamlineAtts_B.singleColor = B_color
+    StreamlineAtts_B.integrationDirection = StreamlineAtts_B.Forward
+    StreamlineAtts_B.legendFlag = 0
+    visit.SetPlotOptions(StreamlineAtts_B)
+
+
     visit.AddPlot("Streamline", name, 1, 0)
     StreamlineAtts_backward = visit.StreamlineAttributes()
     StreamlineAtts_backward.sourceType = StreamlineAtts_backward.SpecifiedPointList
@@ -362,18 +374,7 @@ def setup_backward_and_B_stream(visit, name, launch_points,
     StreamlineAtts_backward.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_backward)
 
-    visit.AddPlot("Streamline", B, 1, 0)
-    StreamlineAtts_B = visit.StreamlineAttributes()
-    StreamlineAtts_B.sourceType = StreamlineAtts_B.SpecifiedPointList
-    StreamlineAtts_B.SetPointList(B_launch_points)
-    StreamlineAtts_B.coloringMethod = StreamlineAtts_B.Solid
-    StreamlineAtts_B.colorTableName = "Default"
-    StreamlineAtts_B.singleColor = B_color
-    StreamlineAtts_B.integrationDirection = StreamlineAtts_B.Backward
-    StreamlineAtts_B.legendFlag = 0
-    visit.SetPlotOptions(StreamlineAtts_B)
-
-    return StreamlineAtts_backward, StreamlineAtts_B
+    return StreamlineAtts_B, StreamlineAtts_backward
 
 
 def setup_forward_backward_alpha_fitted_ion_canonical_flux_tubes(visit, points_foward,
@@ -527,14 +528,14 @@ def main():
 
 
     if args.interactive_session:
-       define_expressions(visit, args.alpha_constant)
        visit.OpenDatabase(database_prefix + args.database_postfix)
+       define_expressions(visit, args.alpha_constant)
        visit.OpenGUI()
        return
 
     output_path = out_dir + '/' + args.output_prefix
-    define_expressions(visit, args.alpha_constant)
     visit.OpenDatabase(database_prefix + args.database_postfix)
+    define_expressions(visit, args.alpha_constant)
     field_nulls = np.loadtxt(args.field_nulls)
     PseudocolorAtts, SliceAtts = setup_current_pseudocolor(visit, max_val=args.current_max, min_val=args.current_min)
     points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
@@ -550,13 +551,13 @@ def main():
         points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
         stream_line_func = setup_massless_electron_canonical_flux_tubes
         points_outer = points_inner
-    elif args.current_and_B:
+    elif args.current:
         stream_line_func = setup_backward_and_B_stream
         current_thetas = full_circle_thetas(20)
         B_thetas = full_circle_thetas(10)
         current_launch_points = launch_points(field_nulls[0],
                                               current_thetas,
-                                              radius=0.003)
+                                              radius=0.001)
         B_launch_points = launch_points(field_nulls[0],
                                         B_thetas,
                                         radius=0.005)
@@ -582,13 +583,13 @@ def main():
         if args.ion_forward_backward:
             points_outer = points_inner
 
-        if args.currentr_and_B:
+        if args.current:
             points_inner = launch_points(field_nulls[time_point],
                                          current_thetas,
-                                         radius=0.003)
+                                         radius=0.001)
             points_outer = launch_points(field_nulls[time_point],
-                                         current_thetas,
-                                         radius=0.003)
+                                         B_thetas,
+                                         radius=0.005)
 
         visit.SetActivePlots(1)
         StreamlineAtts_flux_1.SetPointList(points_outer)
@@ -615,18 +616,22 @@ def parse_args():
     parser.add_argument('--current_min', help='minimum for current color map', default=0.0)
     parser.add_argument('--current_max', help='maximum for current color map', default=5.1e5)
     parser.add_argument('--start_time_point', help='time point of first output frame', default=0)
-    parser.add_argument('--end_time_point', help='time point of last output frame', default=229)
+    parser.add_argument('--end_time_point', help='time point of last output frame', default=250)
     parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
                         default='/home/jensv/rsx/jens_analysis/centroid_fitting/output/2016-08-12/field_nulls.txt')
     parser.add_argument('--time_scale', help='time scale of time steps', default=0.068)
     parser.add_argument('--alpha_constant', help='value of spatially constant alpha', type=int, default=8.1e5)
     task = parser.add_mutually_exclusive_group()
-    task.add_argument('--electron', help='plot canonical electron flux tubes', action='store_true', default=True)
+    task.add_argument('--electron', help='plot canonical electron flux tubes', action='store_true', default=False)
     task.add_argument('--ion', help='plot canonical ion flux tubes', action='store_true', default=False)
-    task.add_argument('--ion_forward_backward', help='plot canonical ion flux tubes', action='store_true', default=False)
-    task.add_arguemnt('--current, help=plot thin current flux tube surrounded by electron / magnetic flux tube', action='store_True' ,default=False)
+    task.add_argument('--ion_forward_backward',
+                      help='plot canonical ion flux tubes',
+                      action='store_true', default=False)
+    task.add_argument('--current',
+                      help='plot thin current flux tube surrounded by electron / magnetic flux tube',
+                      action='store_true', default=False)
     parser.add_argument('--interactive_session', action='store_true', default=False)
-    parser.add_argument('current_to_use', default='J_raw')
+    parser.add_argument('--current_to_use', default='J_raw')
     args = parser.parse_args()
     return args
 
