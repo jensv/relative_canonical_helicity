@@ -3,7 +3,9 @@ import scipy.fftpack as fft
 
 
 def fourier_inverse_curl(Bx, By, Bz, x, y, z):
-
+    r"""
+    Invert curl with pseudo-spectral method described in MacKay 2006.
+    """
     shape = Bx.shape
 
     Bx_padded = np.pad(Bx, pad_width=zip(shape, shape),
@@ -60,17 +62,23 @@ def fourier_inverse_curl(Bx, By, Bz, x, y, z):
     Ay_padded = np.abs(fft.ifftn(Ay_k))
     Az_padded = np.abs(fft.ifftn(Az_k))
 
-    Ax = Ax_padded[shape[0]:shape[0]*2, shape[1]:shape[1]*2, shape[2]:shape[2]*2]
-    Ay = Ay_padded[shape[0]:shape[0]*2, shape[1]:shape[1]*2, shape[2]:shape[2]*2]
-    Az = Az_padded[shape[0]:shape[0]*2, shape[1]:shape[1]*2, shape[2]:shape[2]*2]
+    Ax = Ax_padded[shape[0]:shape[0]*2,
+                   shape[1]:shape[1]*2,
+                   shape[2]:shape[2]*2]
+    Ay = Ay_padded[shape[0]:shape[0]*2,
+                   shape[1]:shape[1]*2,
+                   shape[2]:shape[2]*2]
+    Az = Az_padded[shape[0]:shape[0]*2,
+                   shape[1]:shape[1]*2,
+                   shape[2]:shape[2]*2]
 
     B0_x = np.mean(Bx)
     B0_y = np.mean(By)
     B0_z = np.mean(Bz)
 
-    A0_x = (y*B0_z - z*B0_y)/2.
-    A0_y = (z*B0_x - x*B0_z)/2.
-    A0_z = (x*B0_y - y*B0_x)/2.
+    A0_x = -(y*B0_z - z*B0_y)/2.
+    A0_y = -(z*B0_x - x*B0_z)/2.
+    A0_z = -(x*B0_y - y*B0_x)/2.
 
     Ax = Ax + A0_x
     Ay = Ay + A0_y
