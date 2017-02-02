@@ -19,28 +19,17 @@ def fourier_inverse_curl(Bx, By, Bz, x, y, z):
     ky1 = np.zeros(By_padded[:, 0, 0].size)
     kz1 = np.zeros(Bz_padded[0, 0, :].size)
 
-    dx = np.diff(x[0, :, 0])[0]
-    dy = np.diff(y[:, 0, 0])[0]
-    dz = np.diff(z[0, 0, :])[0]
+    dx = x[0, 1, 0] - x[0, 0, 0]
+    dy = y[1, 0, 0] - y[0, 0, 0]
+    dz = z[0, 0, 1] - z[0, 0, 0]
 
     nx = kx1.size
     ny = ky1.size
     nz = kz1.size
 
-    for i in np.arange(0, np.round(nx/2)):
-        kx1[i] = np.float(i)/nx/2./dx
-    for i in np.arange(np.round(nx/2), nx):
-        kx1[i] = (np.float(i) - nx)/nx/2./dx
-
-    for i in np.arange(0, np.round(ny/2)):
-        ky1[i] = np.float(i)/ny/2./dy
-    for i in np.arange(np.round(ny/2), ny):
-        ky1[i] = (np.float(i) - ny)/ny/2./dy
-
-    for i in np.arange(0, np.round(nz/2)):
-        kz1[i] = np.float(i)/nz/2./dz
-    for i in np.arange(np.round(nz/2), nz):
-        kz1[i] = (np.float(i) - nz)/nz/2./dz
+    kx1 = fft.fftfreq(nx, dx)
+    ky1 = fft.fftfreq(ny, dy)
+    kz1 = fft.fftfreq(nz, dz)
 
     kx, ky, kz = np.meshgrid(kx1, ky1, kz1)
 
