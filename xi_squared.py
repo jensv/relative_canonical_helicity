@@ -76,17 +76,16 @@ def plot_histograms(magnitudes, orientations, bins=50,
     return joint_grid
 
 
-def xi_squared(dist1, dist2, dof=None):
+def xi_squared(dist1, dist2, dof=2.):
     r"""
     """
     assert dist1.shape == dist2.shape, "Distributions do not have equal dimensions."
     addends = (dist1 -  dist2)**2 / (dist1 + dist2)
     addends[np.isclose(dist1 + dist2, 0)] = 0
-    for i in xrange(len(dist1.shape)):
-        addends = np.sum(addends)
+    xi_sq =  np.sum(addends)
     if not dof:
         dof = len(dist1.shape)
-    xi_sq = addends/dof
+    xi_sq = xi_sq/dof
     return xi_sq
 
 
