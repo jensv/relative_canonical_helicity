@@ -34,13 +34,13 @@ def dot_product(vector1, vector2):
         return vector1[0]*vector2[0] + vector1[1]*vector2[1]
 
 
-def gradient(vector, dx=1, dy=1, dz=1,
+def gradient(scalar, dx=1, dy=1, dz=1,
              mesh=None):
     if mesh:
-        dx = mesh[0][:, 1, :] - mesh[0][:, 0, :]
-        dy = mesh[1][1, :, :] - mesh[1][0, :, :]
-        dz = mesh[2][:, :, 1] - mesh[2][:, :, 0]
-    grad = np.gradient(vector, dy, dx, dz)
+        dx = mesh[0][0, 1, 0] - mesh[0][0, 0, 0]
+        dy = mesh[1][1, 0, 0] - mesh[1][0, 0, 0]
+        dz = mesh[2][0, 0, 1] - mesh[2][0, 0, 0]
+    grad = np.gradient(scalar, dy, dx, dz)
     return grad[1], grad[0], grad[2]
 
 
