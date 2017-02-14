@@ -8,8 +8,7 @@ Created on Tue Jan 26 18:20:47 2016
 import numpy as np
 import MDSplus as mds
 import sys
-sys.path.append('/home/jensv/rsx/jens_analysis/time_alignment/source')
-import absolute_times as at
+import time_alignment.absolute_times as at
 
 
 def run_mach_analysis(shots, time_points, angle_signs):
