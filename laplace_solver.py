@@ -5,6 +5,13 @@ import scipy.fftpack as fft
 
 def laplace_3d_dct_fd(mesh, boundary_values):
     r"""
+    Discrete Cosine transform method for solving Laplace equation
+    with Neumann boundary conditions.
+
+    References
+    ----------
+    (Fuka, 2015) (Hockey book)
+    (Numerical Recepies)
     """
     d_x = mesh[0][0, 1, 0] - mesh[0][0, 0, 0]
     d_y = mesh[1][1, 0, 0] - mesh[1][0, 0, 0]
@@ -21,6 +28,8 @@ def laplace_3d_dct_fd(mesh, boundary_values):
 
 def construct_right_side(shape, deltas, boundary_values):
     r"""
+    Return right hand side of the matrix formulation of
+    the Laplace problem.
     """
     right_side = np.zeros(shape)
     right_side[:, 0, :] = 2.*deltas[0]*boundary_values[:, 0, :]
@@ -34,6 +43,7 @@ def construct_right_side(shape, deltas, boundary_values):
 
 def dct_3d(shape, scalar):
     r"""
+    Return 3D discrete cosine transform.
     """
     transform = fft.dct(fft.dct(fft.dct(scalar, axis=1, type=1),
                                 axis=0, type=1),
@@ -41,20 +51,46 @@ def dct_3d(shape, scalar):
     return transform
 
 
+def dst_3d(shape, scalar):
+    r"""
+    Return 3D discrete sine transform.
+    """
+    transform = fft.dst(fft.dst(fft.dst(scalar, axis=1, type=1),
+                                axis=0, type=1),
+                        axis=2, type=1)
+    return transform
+
+
 def idct_3d(shape, transform):
     r"""
+    Return 3D inverse discrete cosine transform.
     """
-    ifft_factor_x = 0.5/(shape[1] - 1.)
-    ifft_factor_y = 0.5/(shape[0] - 1.)
-    ifft_factor_z = 0.5/(shape[2] - 1.)
-    scalar = ifft_factor_x*fft.dct(transform, axis=1, type=1)
-    scalar = ifft_factor_y*fft.dct(scalar, axis=0, type=1)
-    scalar = ifft_factor_z*fft.dct(scalar, axis=2, type=1)
+    idct_factor_x = 0.5/(shape[1] - 1.)
+    idct_factor_y = 0.5/(shape[0] - 1.)
+    idct_factor_z = 0.5/(shape[2] - 1.)
+    scalar = idct_factor_x*fft.dct(transform, axis=1, type=1)
+    scalar = idct_factor_y*fft.dct(scalar, axis=0, type=1)
+    scalar = idct_factor_z*fft.dct(scalar, axis=2, type=1)
+    return scalar
+
+
+def idst_3d(shape, transform):
+    r"""
+    Return 3D inverse discrete sine transform.
+    """
+    idst_factor_x = 0.5/(shape[1] - 1.)
+    idst_factor_y = 0.5/(shape[0] - 1.)
+    idst_factor_z = 0.5/(shape[2] - 1.)
+    scalar = idst_factor_x*fft.dst(transform, axis=1, type=1)
+    scalar = idst_factor_y*fft.dst(scalar, axis=0, type=1)
+    scalar = idst_factor_z*fft.dst(scalar, axis=2, type=1)
     return scalar
 
 
 def construct_eigenvalues(shape):
     r"""
+    Construct eigenvalues of the finite difference matrix of
+    the Laplace problem.
     """
     x_index = np.arange(0, shape[1])
     y_index = np.arange(0, shape[0])
