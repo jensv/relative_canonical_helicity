@@ -13,11 +13,13 @@ import sqlite3
 
 
 def determine_reference_times_all_shots(shots, database, plot=True,
-                                        time_range=[1.5, 2.5], start=False):
+                                        time_range=[1.5, 2.5], start=False,
+                                        idl_path='/Applications/exelis/IDL85/bin/idl'):
     r"""
     Determine relative times for each shot using Jason's script, store in sql
     database.
     """
+    idl = pidly.IDL(idl_path)
     for shot in shots:
         connection = sqlite3.connect(database)
         cursor = connection.cursor()
@@ -28,12 +30,12 @@ def determine_reference_times_all_shots(shots, database, plot=True,
         cursor.close()
         connection.close()
 
-        print 'shot:', shot
+        print 'Determine reference times for shot:', shot
         determine_time, existence = shot_exists(shot, fiducial_a_node,
                                                 fiducial_b_node,
                                                 bias_current_node)
         if determine_time:
-            times, success = determine_times_from_idl(shot)
+            times, success = determine_times_from_idl(shot, idl)
             store_times_in_sql(shot, times, database, start=start)
             if plot:
                 raw_signals = retrieve_fiducial_signals(shot, fiducial_a_node,
@@ -52,6 +54,7 @@ def determine_reference_times_all_shots(shots, database, plot=True,
                     #             legend=True, show=False, time_range=time_range,
                     #             save_as=save_as)
         store_existence_in_sql(shot, database, existence)
+    idl.close()
 
 
 def shot_exists(shot, fiducial_a_node, fiducial_b_node, bias_current_node):
@@ -97,20 +100,27 @@ def shot_exists(shot, fiducial_a_node, fiducial_b_node, bias_current_node):
     return (determine_time, existence)
 
 
-def determine_times_from_idl(shot,
-                             idl_path='/Applications/exelis/IDL85/bin/idl'):
+def determine_times_from_idl(shot, idl):
     r"""
     Run relative time script and return dictionary of ouputs.
     """
     success = True
     times = {}
+    if shot == 15308:
+        print 'IDL script always fails on shot 15308.'
+        times.update({'phase_zero': None,
+                      'phase_zero_index': None,
+                      'period': None,
+                      'phase_reference_time_idl_code_succeeded': False,
+                      'ramp': None,
+                      'ramp_index': None,
+                      'ramp_reference_time_idl_code_succeeded': False})
+        return times, False
     try:
-        idl = pidly.IDL(idl_path)
-        idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period;')
+        idl.pro('pro00100, ' + str(shot) + ', trig_index, trig_time, period;')
         phase_zero_time = float(idl.trig_time)*1e-3
         phase_zero_index = int(idl.trig_index)
         period = float(idl.period)*1e-3
-        idl.close()
         times.update({'phase_zero': phase_zero_time,
                       'phase_zero_index': phase_zero_index,
                       'period': period,
@@ -122,11 +132,9 @@ def determine_times_from_idl(shot,
                       'phase_reference_time_idl_code_succeeded': False})
         success = False
     try:
-        idl = pidly.IDL(idl_path)
         idl.pro('pro00100, '+str(shot)+', trig_index, trig_time, period, current_rise=1;')
         ramp_time = float(idl.trig_time)*1e-3
         ramp_index = int(idl.trig_index)
-        idl.close()
         times.update({'ramp': ramp_time,
                       'ramp_index': ramp_index,
                       'ramp_reference_time_idl_code_succeeded': True})
@@ -159,7 +167,7 @@ def store_times_in_sql(shot, times, database, start=False):
                             "period = :period, ramp_time = :ramp_time, " +
                             "ramp_index = :ramp_index, " +
                             "phase_reference_time_idl_code_succeeded = :phase_reference_time_idl_code_succeeded, " +
-                            "ramp_reference_time_idl_code_succeeded = :ramp_reference_time_idl_code_succeeded, " +
+                            "ramp_reference_time_idl_code_succeeded = :ramp_reference_time_idl_code_succeeded " +
                             "WHERE shot = :shot;")
         cursor.execute(update_statement, {'shot': shot,
                                           'phase_reference_time_idl_code_succeeded': times['phase_reference_time_idl_code_succeeded'],
