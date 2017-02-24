@@ -1,21 +1,30 @@
 import numpy as np
 from scipy.special import ellipe, ellipk
 
-def curl(quantity, spacing=(1, 1, 1), mesh=None):
+def curl(quantity, spacing=(1, 1, 1), mesh=None,
+         vector_grad=None):
     r"""
     Return 3D curl.
     """
-    dx, dy, dz = spacing
-    if mesh:
-        dx = mesh[0][0, 1, 0] - mesh[0][0, 0, 0]
-        dy = mesh[1][1, 0, 0] - mesh[1][0, 0, 0]
-        dz = mesh[2][0, 0, 1] - mesh[2][0, 0, 0]
-    dx_dy = np.gradient(quantity[0], axis=0)/dy
-    dx_dz = np.gradient(quantity[0], axis=2)/dz
-    dy_dx = np.gradient(quantity[1], axis=1)/dx
-    dy_dz = np.gradient(quantity[1], axis=2)/dz
-    dz_dx = np.gradient(quantity[2], axis=1)/dx
-    dz_dy = np.gradient(quantity[2], axis=0)/dy
+    if not vector_grad:
+        dx, dy, dz = spacing
+        if mesh:
+            dx = mesh[0][0, 1, 0] - mesh[0][0, 0, 0]
+            dy = mesh[1][1, 0, 0] - mesh[1][0, 0, 0]
+            dz = mesh[2][0, 0, 1] - mesh[2][0, 0, 0]
+        dx_dy = np.gradient(quantity[0], axis=0)/dy
+        dx_dz = np.gradient(quantity[0], axis=2)/dz
+        dy_dx = np.gradient(quantity[1], axis=1)/dx
+        dy_dz = np.gradient(quantity[1], axis=2)/dz
+        dz_dx = np.gradient(quantity[2], axis=1)/dx
+        dz_dy = np.gradient(quantity[2], axis=0)/dy
+    else:
+        dx_dy = vector_grad[0][1]
+        dx_dz = vector_grad[0][2]
+        dy_dx = vector_grad[1][0]
+        dy_dz = vector_grad[1][2]
+        dz_dx = vector_grad[2][0]
+        dz_dy = vector_grad[2][1]
     curl_x = dz_dy - dy_dz
     curl_y = dx_dz - dz_dx
     curl_z = dy_dx - dx_dy
