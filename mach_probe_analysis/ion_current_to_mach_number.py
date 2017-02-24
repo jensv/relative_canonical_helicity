@@ -88,10 +88,10 @@ def read_isat(shot, tree_name, mach_r_node_name, mach_l_node_name):
     mach_l_node = rsx_tree.getNode(mach_l_node_name)
     mach_r_data = mach_r_node.getData()
     mach_l_data = mach_l_node.getData()
-    mach_r_raw = np.asarray(mach_r_data.getValue())
-    mach_l_raw = np.asarray(mach_l_data.getValue())
-    mach_r_time = np.asarray(mach_r_data.getDimensions()[0])*1e-3
-    mach_l_time = np.asarray(mach_l_data.getDimensions()[0])*1e-3
+    mach_r_raw = mach_r_data.data().astype('float64')
+    mach_l_raw = mach_l_data.data().astype('float64')
+    mach_r_time = (mach_r_data.dim_of().data()*1e-3).astype('float64')
+    mach_l_time = (mach_l_data.dim_of().data()*1e-3).astype('float64')
     return mach_r_raw, mach_r_time, mach_l_raw, mach_l_time
 
 

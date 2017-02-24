@@ -12,16 +12,23 @@ def read_vector(vtk_file, component_names):
                         component_names[1], component_names[2])
     return mesh, vector
 
+def read_scalar(vtk_file, component_name):
+    r"""
+    """
+    data = get_data(vtk_file)
+    mesh, shape = get_mesh(data)
+    scalar = get_scalar(data, shape, component_name)
+    return mesh, scalar
 
 def get_data(vtk_file):
     r"""
     Get data from a vtk rectilinear grid file.
-    
+
     Parameters
     ----------
     vtk_file: string
         file name
-    
+
     Returns
     -------
     data: RectilinearGrid object
@@ -39,12 +46,12 @@ def get_data(vtk_file):
 def get_mesh(data):
     r"""
     Reconstruct vtk rectilinear mesh with numpy.
-    
+
     Parameters
     ----------
     data: RectilinearGrid object
          contains all data and grid points.
-         
+
     Returns
     -------
     mesh: array of ndarray
@@ -63,7 +70,7 @@ def get_mesh(data):
 def get_scalar(data, shape, scalar_name):
     r"""
     Return numpy array of a scalar in vtk RectilinearGrid object.
-    
+
     Parameters
     ----------
     data: RectilinearGrid object
@@ -74,22 +81,22 @@ def get_scalar(data, shape, scalar_name):
         name of scalar
     Returns
     -------
-    scalar: ndarray 
+    scalar: ndarray
         scalar data resized to shape
     """
     shape = (shape[2], shape[0], shape[1])
     data = data.GetPointData()
-    scalar = vtk_to_numpy(data.GetArray(scalar_name))
+    scalar = vtk_to_numpy(data.GetArray(scalar_name)).astype('float64')
     scalar.resize(shape)
     scalar = np.swapaxes(np.swapaxes(scalar, 1, 0), 2, 1)
     return scalar
 
 
-def get_vector(data, shape, x_name, 
+def get_vector(data, shape, x_name,
                y_name, z_name):
     r"""
     Return numpy array of a scalar in vtk RectilinearGrid object.
-    
+
     Parameters
     ----------
     data: RectilinearGrid object
