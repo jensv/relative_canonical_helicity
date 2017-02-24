@@ -14,9 +14,13 @@ def read_idl(quantity, data_path='../output/comprehensive_3d_plot/2016-08-12/'):
     z416_file = data_path + quantity + '_z416' + idl_ending
 
     z249_measurements = idl.readsav(z249_file)
+    z249_measurements['a_out'] = z249_measurements['a_out'].astype('float64')
     z302_measurements = idl.readsav(z302_file)
+    z302_measurements['a_out'] = z302_measurements['a_out'].astype('float64')
     z357_measurements = idl.readsav(z357_file)
+    z357_measurements['a_out'] = z357_measurements['a_out'].astype('float64')
     z416_measurements = idl.readsav(z416_file)
+    z416_measurements['a_out'] = z416_measurements['a_out'].astype('float64')
 
     measurements = {0.249: z249_measurements,
                     0.302: z302_measurements,
