@@ -178,14 +178,29 @@ def main(args):
         b_field = [fields['B_x'], fields['B_y'], fields['B_z']]
         vector_potential = devore_invert_curl(mesh,
                                               b_field)
+
+        b_field_dynamic = np.array(b_field)
+        b_field_dynamic[2] = b_field[2] - args.bias_field_magnitude
+        vector_potential_dynamic = devore_invert_curl(mesh,
+                                                      b_field_dynamic)
         ## Reference fields
         ##
         (vector_potential_ref,
-         b_field_ref) = ref_fields(mesh, b_field)
+         b_field_ref,
+         b_scalar_potential_ref) = ref_fields(mesh, b_field,
+                                              return_scalar_ref=True)
+        (vector_potential_dynamic_ref,
+         b_field_dynamic_ref,
+         b_scalar_potential_dynamic_ref) = ref_fields(mesh, b_field_dynamic,
+                                                      return_scalar_ref=True)
         (ion_velocity_smooth_ref,
-         ion_vorticity_smooth_ref) = ref_fields(mesh, ion_vorticity_smooth)
+         ion_vorticity_smooth_ref,
+         i_scalar_potential_smooth_ref) = ref_fields(mesh, ion_vorticity_smooth,
+                                                     return_scalar_ref=True)
         (ion_velocity_ref,
-         ion_vorticity_ref) = ref_fields(mesh, ion_vorticity)
+         ion_vorticity_ref,
+         i_scalar_potential_ref) = ref_fields(mesh, ion_vorticity,
+                                              return_scalar_ref=True)
 
         fields =  ([b_field[0]] + [b_field[1]] + [b_field[2]] +
                    list(current_smooth) + list(current) +
@@ -200,10 +215,18 @@ def main(args):
                    list(vector_potential) + list(b_field_ref) +
                    list(vector_potential_ref) + list(ion_velocity_ref) +
                    list(ion_vorticity_smooth_ref) +
-                   list(ion_vorticity_ref))
+                   list(ion_vorticity_ref) +
+                   list(b_field_dynamic) +
+                   list(b_field_dynamic_ref) +
+                   list(vector_potential_dynamic) +
+                   list(vector_potential_dynamic_ref) +
+                   [b_scalar_potential_ref] +
+                   [b_scalar_potential_dynamic_ref] +
+                   [i_scalar_potential_smooth_ref] +
+                   [i_scalar_potential_ref])
 
         for i, field in enumerate(fields):
-             fields[i] = field.astype('float64')
+            fields[i] = field.astype('float64')
 
         quantity_names = ['B_x', 'B_y', 'B_z',
                           'j_x', 'j_y', 'j_z',
@@ -221,7 +244,15 @@ def main(args):
                           'A_ref_x', 'A_ref_y', 'A_ref_z',
                           'u_i_ref_x', 'u_i_ref_y', 'u_i_ref_z',
                           'w_i_ref_x', 'w_i_ref_y', 'w_i_ref_z',
-                          'w_i_raw_ref_x', 'w_i_raw_ref_y', 'w_i_raw_ref_z']
+                          'w_i_raw_ref_x', 'w_i_raw_ref_y', 'w_i_raw_ref_z',
+                          'B_dynamic_x', 'B_dynamic_y', 'B_dynamic_z',
+                          'B_dynamic_ref_x', 'B_dynamic_ref_y', 'B_dynamic_ref_z',
+                          'A_dynamic_x', 'A_dynamic_y', 'A_dynamic_z',
+                          'A_dynamic_ref_x', 'A_dynamic_ref_y', 'A_dynamic_ref_z',
+                          'phi_b_ref',
+                          'phi_b_dynamic_ref',
+                          'phi_i_ref',
+                          'phi_i_raw_ref']
 
         x, y, z, variables = struc_3d.prepare_for_rectilinear_grid(mesh, fields,
                                                                    quantity_names)
@@ -264,6 +295,11 @@ def parse_args():
                         help='value used for constant density parameters ',
                         type=float,
                         default=1e18)
+    parser.add_argument('--bias_field_magnitude',
+                        help='magnitude of axial bias magnetic field,' +
+                             'used to calculate dynamic field.',
+                        type=float,
+                        default=0.02)
     parser.add_argument('--time_steps',
                         help='# of time steps', type=int,
                         default=250)
