@@ -86,8 +86,12 @@ def rel_cross_helicity(velocity, velocity_ref,
     term1 = general_relative_helicity(velocity, velocity_ref,
                                       magnetic_field, magnetic_field_ref,
                                       'cross', dx, dy, dz)
-    term2 = general_relative_helicity(velocity, -velocity_ref,
-                                      magnetic_field, -magnetic_field_ref,
+    inverted_velocity_ref = [-velocity_ref[0], -velocity_ref[1],
+                             -velocity_ref[2]]
+    inverted_magnetic_field_ref = [-magnetic_field_ref[0], -magnetic_field_ref[1],
+                                   -magnetic_field_ref[1]]
+    term2 = general_relative_helicity(velocity, inverted_velocity_ref,
+                                      magnetic_field, inverted_magnetic_field_ref,
                                       'cross', dx, dy, dz)
     return term1 + term2
 
