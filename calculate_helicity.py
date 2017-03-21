@@ -168,7 +168,7 @@ def parse_args():
                         default='../output/canonical_quantities/')
     parser.add_argument('--input_date',
                         help='time stamp of input files',
-                        default='2017-02-22-11-01')
+                        default='2017-02-23-19-37')
     parser.add_argument('--input_file_text',
                         help='input file name',
                         default='canonical_quantities')
