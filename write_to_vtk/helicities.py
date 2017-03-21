@@ -13,6 +13,7 @@ def kinetic_helicity(velocity,
                      vorticity,
                      dx, dy, dz):
     r"""
+    Returns kinetic helicity.
     """
     return general_helicity(velocity,
                             vorticity,
@@ -24,17 +25,19 @@ def cross_helicity(velocity,
                    magnetic_field,
                    dx, dy, dz):
     r"""
+    Returns cross helicity.
     """
-    return general_helicity(velocity,
-                            magnetic_field,
-                            'cross',
-                            dx, dy, dz)
+    return 2.*general_helicity(velocity,
+                               magnetic_field,
+                               'cross',
+                               dx, dy, dz)
 
 
 def magnetic_helicity(vector_potential,
                       magnetic_field,
                       dx, dy, dz):
     r"""
+    Returns magnetic helicity.
     """
     return general_helicity(vector_potential,
                             magnetic_field,
@@ -45,6 +48,7 @@ def magnetic_helicity(vector_potential,
 def general_helicity(momentum, circulation, kind,
                      dx, dy, dz):
     r"""
+    Returns a general helicity for a given momentum and circulation.
     """
     momentum = np.asarray(momentum)
     ciruclation = np.asarray(circulation)
@@ -60,7 +64,8 @@ def rel_kin_helicity(velocity, velocity_ref,
                          vorticity, vorticity_ref,
                          dx, dy, dz):
     r"""
-    """ 
+    Returns relative kinetic helicity.
+    """
     return general_relative_helicity(velocity, velocity_ref,
                                      vorticity, vorticity_ref,
                                      'kinetic', dx, dy, dz)
@@ -70,16 +75,28 @@ def rel_cross_helicity(velocity, velocity_ref,
                             magnetic_field, magnetic_field_ref,
                             dx, dy, dz):
     r"""
+    Returns relative cross helicity.
+
+    Notes
+    -----
+
+    Dot product differs from other relative helicities.
+    u_- \cdot B_+ + u_+ \cdot B_-
     """
-    return general_relative_helicity(velocity, velocity_ref,
-                                     magnetic_field, magnetic_field_ref,
-                                     'cross', dx, dy, dz)
+    term1 = general_relative_helicity(velocity, velocity_ref,
+                                      magnetic_field, magnetic_field_ref,
+                                      'cross', dx, dy, dz)
+    term2 = general_relative_helicity(velocity, -velocity_ref,
+                                      magnetic_field, -magnetic_field_ref,
+                                      'cross', dx, dy, dz)
+    return term1 + term2
 
 
 def rel_mag_helicity(vector_potential, vector_potential_ref,
                                magnetic_field, magnetic_field_ref,
                                dx, dy, dz):
     r"""
+    Returns relative magnetic helicity.
     """
     return general_relative_helicity(vector_potential, vector_potential_ref,
                                      magnetic_field, magnetic_field_ref,
@@ -92,6 +109,12 @@ def general_relative_helicity(momentum, momentum_ref,
                               kind,
                               dx, dy, dz):
     r"""
+    Returns general relative helicity.
+
+    Notes
+    -----
+    Dot product is
+    (momentum - momentum_ref) \cdot (circulation + circulation_ref)
     """
     momentum = np.asarray(momentum)
     momentum_ref = np.asarray(momentum_ref)
