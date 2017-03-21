@@ -4,7 +4,8 @@ from laplace_solver.laplace_solver import laplace_3d_dct_fd
 import vector_calculus.vector_calculus as vc
 
 
-def determine_reference_fields(mesh, circulation):
+def determine_reference_fields(mesh, circulation,
+                               return_scalar_ref=False):
     r"""
     Return reference fields used for relative helicity.
     Reference fields consist of a circulation and the general momentum vector
@@ -42,7 +43,10 @@ def determine_reference_fields(mesh, circulation):
     circulation_ref = vc.gradient(scalar_potential_ref, mesh=mesh)
     momentum_ref = devore_invert_curl(mesh,
                                       circulation_ref)
-    return momentum_ref, circulation_ref
+    if return_scalar_ref:
+        return momentum_ref, circulation_ref, scalar_potential_ref
+    else:
+        return momentum_ref, circulation_ref
 
 
 def make_boundary(field):
