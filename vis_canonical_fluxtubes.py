@@ -358,6 +358,38 @@ def define_expressions(visit, alpha=8.1e5):
                                  "Omega_i_raw_plus_density_dependence +"
                                  "Omega_i_ref_raw_vort_density_dependence")
 
+    ## Dynamic fields
+    visit.DefineVectorExpression("B_dynamic", "{B_dynamic_x, B_dynamic_y, B_dynamic_z}")
+    visit.DefineVectorExpression("A_dynamic", "{A_dynamic_x, A_dynamic_y, A_dynamic_z}")
+    visit.DefineVectorExpression("B_dynamic_ref", "{B_dynamic_ref_x,"
+                                                   "B_dynamic_ref_y, B_dynamic_ref_z}")
+    visit.DefineVectorExpression("A_dynamic_ref", "{A_dynamic_ref_x,"
+                                                   "A_dynamic_ref_y, A_dynamic_ref_z}")
+
+    ## Helicity density
+    visit.DefineScalarExpression("mag_helicity_density", "dot(A, B)")
+    visit.DefineScalarExpression("mag_ref_helicity_density", "dot(A_ref, B_ref)")
+    visit.DefineScalarExpression("mag_rel_helicity_density", "dot(A-A_ref, B+B_ref)")
+    visit.DefineScalarExpression("mag_dynamic_helicity_density", "dot(A_dynamic, B_dynamic)")
+    visit.DefineScalarExpression("mag_dynamic_ref_helicity_density",
+                                 "dot(A_dynamic_ref, B_dynamic_ref)")
+    visit.DefineScalarExpression("mag_dynamic_rel_helicity_density",
+                                 "dot(A_dynamic - A_dynamic_ref, B_dynamic + B_dynamic_ref)")
+    visit.DefineScalarExpression("kin_helicity_density",
+                                 "dot(u_i_plus, omega_i_raw_plus)")
+    visit.DefineScalarExpression("kin_ref_helicity_density",
+                                 "dot(u_i_ref_raw, omega_i_ref_raw)")
+    visit.DefineScalarExpression("kin_rel_helicity_density",
+                                 "dot(u_i_plus - u_i_ref_raw, omega_i_raw_plus + omega_i_ref_raw")
+    visit.DefineScalarExpression("cross_helicity_density",
+                                 "dot(B, u_i_plus)")
+    visit.DefineScalarExpression("cross_ref_helicity_density",
+                                 "dot(B_ref, u_i_ref_raw)")
+    visit.DefineScalarExpression("cross_rel_helicity_density",
+                                 "dot(u_i_plus - u_i_ref_raw, B - B_ref)")
+
+
+
 
 def normalize_scalar(visit, scalar_name,
                      normalized_scalar_name):
@@ -840,7 +872,7 @@ def main():
     database_prefix = args.database_prefix + args.database_date
     visit.Launch()
     today = datetime.now().strftime('%Y-%m-%d-%H-%M')
-    out_dir = '../output/' + today
+    out_dir = '../output/canonical_flux_tubes/' + today
     try:
        os.makedirs(out_dir)
     except:
