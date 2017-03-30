@@ -80,7 +80,8 @@ def define_expressions(visit, alpha=8.1e5):
                                   "J_raw * Te_smooth_normalized^3")
     visit.DefineVectorExpression("J_raw_filtered_by_Te_smooth^4",
                                   "J_raw * Te_smooth_normalized^4")
-
+  
+    print 'u_i_plus'
     visit.DefineVectorExpression("u_i_plus", "{u_i_x_plus, u_i_y, u_i_z}")
     visit.DefineVectorExpression("u_i_plus_perp", "{dot(u_i_plus, {1, 0, 0}), dot(u_i_plus, "
                                  "{0, 1, 0}), 0}")
@@ -174,6 +175,7 @@ def define_expressions(visit, alpha=8.1e5):
 
     ## Omega_e density dependence
     ##
+    print 'Omege_e'
     visit.DefineVectorExpression("Omega_e_density_dependence",
                                  "n*B + cross(gradient(n), A)")
     visit.DefineVectorExpression("Omega_e_density_dependence_perp",
@@ -189,6 +191,7 @@ def define_expressions(visit, alpha=8.1e5):
 
     ## u_i_x(t) = u_i_y(t MINUS tau*0.25)
     ##
+    print 'u_i_minus'
     visit.DefineVectorExpression("u_i_minus",
                                  "{u_i_x_minus, u_i_y, u_i_z}")
     visit.DefineVectorExpression("u_i_minus_perp",
@@ -290,19 +293,21 @@ def define_expressions(visit, alpha=8.1e5):
                                  "dot(Omega_i_raw_minus_times_density, {0, 0, 1})")
 
     ## Canonical momentum fields
+    print 'canonical momentum fields'
     visit.DefineVectorExpression("P_i", "%e*A + %e*u_i_plus" %
                                  (elementary_charge, proton_mass))
     visit.DefineVectorExpression("P_i_times_density", "n*P_i")
 
     ## Reference fields
+    print 'reference_fields'
     visit.DefineVectorExpression("B_ref", "{B_ref_x, B_ref_y, B_ref_z}")
     visit.DefineVectorExpression("A_ref", "{A_ref_x, A_ref_y, A_ref_z}")
     visit.DefineVectorExpression("u_i_ref",
                                  "{u_i_ref_x, u_i_ref_y, u_i_ref_z}")
     visit.DefineVectorExpression("omega_i_ref",
                                  "{omega_i_ref_x, omega_i_ref_y, omega_i_ref_z}")
-    visit.DefineVectorExpression("u_i_ref_raw_vort",
-                                 "{u_i_raw_ref_x, u_i_raw_ref_y, u_i_raw_ref_z}")
+    #visit.DefineVectorExpression("u_i_ref_raw_vort",
+    #                              "{u_i_raw_ref_x, u_i_raw_ref_y, u_i_raw_ref_z}")
     visit.DefineVectorExpression("omega_i_ref_raw",
                                  "{w_i_raw_ref_x, w_i_raw_ref_y, w_i_raw_ref_z}")
     visit.DefineVectorExpression("P_i_ref", "%e*A_ref + %e*u_i_ref" %
@@ -332,10 +337,14 @@ def define_expressions(visit, alpha=8.1e5):
 
 
     ## Relative fields
+    print 'relative_fields'
     visit.DefineVectorExpression("B_rel", "B + B_ref")
+    visit.DefineVectorExpression("B_rel_minus", "B - B_ref")
     visit.DefineVectorExpression("A_rel", "A - A_ref")
     visit.DefineVectorExpression("u_i_rel", "u_i_plus - u_i_ref")
-    visit.DefineVectorExpression("u_i_rel_raw_vort", "u_i_plus - u_i_ref_raw_vort")
+    visit.DefineVectorExpression("u_i_rel_plus", "u_i_plus + u_i_ref")
+    #visit.DefineVectorExpression("u_i_rel_raw_vort", "u_i_plus - u_i_ref_raw_vort")
+    #visit.DefineVectorExpression("u_i_rel_plus_raw_vort", "u_i_plus + u_i_ref_raw_vort")
     visit.DefineVectorExpression("omega_i_rel", "omega_i_plus + omega_i_ref")
     visit.DefineVectorExpression("omega_i_rel_raw", "omega_i_raw_plus + omega_i_ref_raw")
     visit.DefineVectorExpression("P_i_rel", "P_i - P_i_ref")
@@ -359,6 +368,7 @@ def define_expressions(visit, alpha=8.1e5):
                                  "Omega_i_ref_raw_vort_density_dependence")
 
     ## Dynamic fields
+    print 'dynamic_fields'
     visit.DefineVectorExpression("B_dynamic", "{B_dynamic_x, B_dynamic_y, B_dynamic_z}")
     visit.DefineVectorExpression("A_dynamic", "{A_dynamic_x, A_dynamic_y, A_dynamic_z}")
     visit.DefineVectorExpression("B_dynamic_ref", "{B_dynamic_ref_x,"
@@ -367,6 +377,7 @@ def define_expressions(visit, alpha=8.1e5):
                                                    "A_dynamic_ref_y, A_dynamic_ref_z}")
 
     ## Helicity density
+    print 'density_defs'
     visit.DefineScalarExpression("mag_helicity_density", "dot(A, B)")
     visit.DefineScalarExpression("mag_ref_helicity_density", "dot(A_ref, B_ref)")
     visit.DefineScalarExpression("mag_rel_helicity_density", "dot(A-A_ref, B+B_ref)")
@@ -380,13 +391,14 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineScalarExpression("kin_ref_helicity_density",
                                  "dot(u_i_ref_raw, omega_i_ref_raw)")
     visit.DefineScalarExpression("kin_rel_helicity_density",
-                                 "dot(u_i_plus - u_i_ref_raw, omega_i_raw_plus + omega_i_ref_raw")
+                                 "dot(u_i_plus - u_i_ref_raw, omega_i_raw_plus + omega_i_ref_raw)")
     visit.DefineScalarExpression("cross_helicity_density",
-                                 "dot(B, u_i_plus)")
+                                 "2.*dot(B, u_i_plus)")
     visit.DefineScalarExpression("cross_ref_helicity_density",
-                                 "dot(B_ref, u_i_ref_raw)")
+                                 "2.*dot(B_ref, u_i_ref)")
     visit.DefineScalarExpression("cross_rel_helicity_density",
-                                 "dot(u_i_plus - u_i_ref_raw, B - B_ref)")
+                                 "(dot(u_i_plus - u_i_ref, B + B_ref)" 
+                                 "+ dot(u_i_plus + u_i_ref, B - B_ref))")
 
 
 
@@ -635,39 +647,6 @@ def setup_backward_and_B_stream(visit, name, launch_points,
     return StreamlineAtts_B, StreamlineAtts_backward
 
 
-def setup_forward_backward_alpha_fitted_ion_canonical_flux_tubes(visit, points_foward,
-                                                                 points_backward,
-                                                                 forward_color=tan,
-                                                                 backward_color=olive):
-    r"""
-    Setup two ion canonical flux tubes, one integrating in the forward
-    direction, one integrating in the backward direction.
-    """
-    visit.AddPlot("Streamline", "Omega_i_alpha_fitted", 1, 0)
-    StreamlineAtts_forward = visit.StreamlineAttributes()
-    StreamlineAtts_forward.sourceType = StreamlineAtts_forward.SpecifiedPointList
-    StreamlineAtts_forward.SetPointList(points_foward)
-    StreamlineAtts_forward.coloringMethod = StreamlineAtts_forward.Solid
-    StreamlineAtts_forward.colorTableName = "Default"
-    StreamlineAtts_forward.singleColor = forward_color
-    StreamlineAtts_forward.integrationDirection = StreamlineAtts_forward.Forward
-    StreamlineAtts_forward.legendFlag = 0
-    visit.SetPlotOptions(StreamlineAtts_forward)
-
-    visit.AddPlot("Streamline", "Omega_i_alpha_fitted", 1, 0)
-    StreamlineAtts_backward = visit.StreamlineAttributes()
-    StreamlineAtts_backward.sourceType = StreamlineAtts_backward.SpecifiedPointList
-    StreamlineAtts_backward.SetPointList(points_backward)
-    StreamlineAtts_backward.coloringMethod = StreamlineAtts_backward.Solid
-    StreamlineAtts_backward.colorTableName = "Default"
-    StreamlineAtts_backward.singleColor = backward_color
-    StreamlineAtts_backward.integrationDirection = StreamlineAtts_backward.Backward
-    StreamlineAtts_backward.legendFlag = 0
-    visit.SetPlotOptions(StreamlineAtts_backward)
-
-    return StreamlineAtts_forward, StreamlineAtts_backward
-
-
 def setup_field_line(visit, quantity,
                      launch_point=(0.01, 0.01), launch_z=0.249,
                      color=black):
@@ -880,12 +859,13 @@ def main():
 
 
     if args.interactive_session:
-       visit.OpenDatabase(database_prefix + args.database_postfix)
+       visit.OpenDatabase(database_prefix + args.database_postfix + "*.vtk database")
        define_expressions(visit, args.alpha_constant)
        visit.OpenGUI()
        return
 
     output_path = out_dir + '/' + args.output_prefix
+    print 'data_path', database_prefix + args.database_postfix
     visit.OpenDatabase(database_prefix + args.database_postfix)
     define_expressions(visit, args.alpha_constant)
     field_nulls = np.loadtxt(args.field_nulls)
@@ -1066,7 +1046,7 @@ def parse_args():
     parser.add_argument('--start_time_point', help='time point of first output frame', type=int, default=0)
     parser.add_argument('--end_time_point', help='time point of last output frame', type=int, default=250)
     parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
-                        default='/home/jensv/rsx/jens_analysis/centroid_fitting/output/2016-08-12/field_nulls.txt')
+                        default='/home/jensv/rsx/jens_analysis/output/centroid_fitting/2016-08-12/field_nulls.txt')
     parser.add_argument('--time_scale', help='time scale of time steps', default=0.068)
     parser.add_argument('--alpha_constant', help='value of spatially constant alpha',
                         type=int, default=8.1e5)
