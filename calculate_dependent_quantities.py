@@ -27,6 +27,7 @@ from vector_calculus import vector_calculus as vc
 def main(args):
     r"""
     """
+    just_magnetic = args.just_magnetic
     interpolate_nan = args.interpolate_nan
     now = datetime.now().strftime("%Y-%m-%d-%H-%M")
     out_dir = '../output/' + args.output_prefix + '/' + now + '/'
@@ -38,17 +39,23 @@ def main(args):
     in_file = args.input_file_text
     input_path = in_dir + in_file
 
-    fields_to_read = ('B_x', 'B_y', 'B_z',
-                      'n', 'Te',
-                      'mach_y', 'mach_z',
-                      'B_x_dx', 'B_x_dy', 'B_x_dz',
-                      'B_y_dx', 'B_y_dy', 'B_y_dz',
-                      'B_z_dx', 'B_z_dy', 'B_z_dz',
-                      'n_dx', 'n_dy', 'n_dz',
-                      'Te_dx', 'Te_dy', 'Te_dz',
-                      'mach_y_dx', 'mach_y_dy', 'mach_y_dz',
-                      'mach_z_dx', 'mach_z_dy', 'mach_z_dz')
-    mach_fields_to_read = ('mach_y', 'mach_y_dx', 'mach_y_dy', 'mach_y_dz')
+    if not just_magnetic:
+        fields_to_read = ('B_x', 'B_y', 'B_z',
+                          'n', 'Te',
+                          'mach_y', 'mach_z',
+                          'B_x_dx', 'B_x_dy', 'B_x_dz',
+                          'B_y_dx', 'B_y_dy', 'B_y_dz',
+                          'B_z_dx', 'B_z_dy', 'B_z_dz',
+                          'n_dx', 'n_dy', 'n_dz',
+                          'Te_dx', 'Te_dy', 'Te_dz',
+                          'mach_y_dx', 'mach_y_dy', 'mach_y_dz',
+                          'mach_z_dx', 'mach_z_dy', 'mach_z_dz')
+        mach_fields_to_read = ('mach_y', 'mach_y_dx', 'mach_y_dy', 'mach_y_dz')
+    else:
+        fields_to_read = ('B_x', 'B_y', 'B_z',
+                          'B_x_dx', 'B_x_dy', 'B_x_dz',
+                          'B_y_dx', 'B_y_dy', 'B_y_dz',
+                          'B_z_dx', 'B_z_dy', 'B_z_dz')
 
     u_x_time_points_plus = np.roll(np.arange(250), int(np.round(250*0.25)))
     u_x_time_points_minus = np.roll(np.arange(250), -int(np.round(250*0.25)))
@@ -86,92 +93,93 @@ def main(args):
 
         ## density and temperature
         ##
-        density = fields['n']
-        grad_density = (fields['n_dx'], fields['n_dy'], fields['n_dz'])
-        temperature = fields['Te']
-        grad_temperature = (fields['Te_dx'], fields['Te_dy'], fields['Te_dz'])
+        if not just_magnetic:
+            density = fields['n']
+            grad_density = (fields['n_dx'], fields['n_dy'], fields['n_dz'])
+            temperature = fields['Te']
+            grad_temperature = (fields['Te_dx'], fields['Te_dy'], fields['Te_dz'])
 
-        density_plane_normalized = normalize_scalar_by_plane(density)
-        temperature_plane_normalized = normalize_scalar_by_plane(temperature)
-        density_smooth = boxcar_filter(density,
-                                       args.filter_width)
-        temperature_smooth = boxcar_filter(temperature,
+            density_plane_normalized = normalize_scalar_by_plane(density)
+            temperature_plane_normalized = normalize_scalar_by_plane(temperature)
+            density_smooth = boxcar_filter(density,
                                            args.filter_width)
-        density_smooth_plane_normalized = normalize_scalar_by_plane(density_smooth)
-        temperature_smooth_plane_normalized = normalize_scalar_by_plane(temperature_smooth)
-        density_constant = args.density_constant_factor*np.ones(density.shape)
-        temperature_smooth_norm = temperature_smooth/np.nanmax(temperature_smooth)
-        temperature_norm = (temperature/
-                            np.nanmax(temperature))
+            temperature_smooth = boxcar_filter(temperature,
+                                               args.filter_width)
+            density_smooth_plane_normalized = normalize_scalar_by_plane(density_smooth)
+            temperature_smooth_plane_normalized = normalize_scalar_by_plane(temperature_smooth)
+            density_constant = args.density_constant_factor*np.ones(density.shape)
+            temperature_smooth_norm = temperature_smooth/np.nanmax(temperature_smooth)
+            temperature_norm = (temperature/
+                                np.nanmax(temperature))
 
-        ## velocity and vorticity
-        ##
-        mach_file = (input_path +
-                     str(u_x_time_points_plus[time_point]).zfill(4) +
-                     '.vtk')
-        mach_x_fields = {}
-        for field in mach_fields_to_read:
-            read = rrv.read_scalar(mach_file, field)
-            mach_x_fields[field] = read[1][ylow:yhigh, xlow:xhigh, zlow:zhigh]
-        mach_x_p = mach_x_fields['mach_y']
-        grad_mach_x_p = (mach_x_fields['mach_y_dx'],
-                         mach_x_fields['mach_y_dy'],
-                         mach_x_fields['mach_y_dz'])
-        mach_file = (input_path +
-                     str(u_x_time_points_minus[time_point]).zfill(4) +
-                     '.vtk')
-        mach_x_fields = {}
-        for field in mach_fields_to_read:
-            read = rrv.read_scalar(mach_file, field)
-            mach_x_fields[field] = read[1][ylow:yhigh, xlow:xhigh, zlow:zhigh]
-        mach_x_m = mach_x_fields['mach_y']
-        grad_mach_x_m = (mach_x_fields['mach_y_dx'],
-                         mach_x_fields['mach_y_dy'],
-                         mach_x_fields['mach_y_dz'])
-        mach_y = fields['mach_y']
-        grad_mach_y = (fields['mach_y_dx'],
-                       fields['mach_y_dy'],
-                       fields['mach_y_dz'])
-        mach_z = fields['mach_z']
-        grad_mach_z = (fields['mach_z_dx'],
-                       fields['mach_z_dy'],
-                       fields['mach_z_dz'])
-        te = temperature
-        u_i_x_plus = np.sqrt(te*q_e/m_i)*mach_x_p
-        u_i_x_minus = np.sqrt(te*q_e/m_i)*mach_x_m
-        u_i_y = np.sqrt(te*q_e/m_i)*mach_y
-        u_i_z = np.sqrt(te*q_e/m_i)*mach_z
-        ion_velocity_p = [u_i_x_plus, u_i_y, u_i_z]
-        ion_velocity_m = [u_i_x_minus, u_i_y, u_i_z]
-        grad_ion_velocity_x_p = grad_ion_velocity(mach_x_p, grad_mach_x_p,
-                                                  temperature, grad_temperature)
-        grad_ion_velocity_x_m = grad_ion_velocity(mach_x_m, grad_mach_x_m,
-                                                  temperature, grad_temperature)
-        grad_ion_velocity_y = grad_ion_velocity(mach_y, grad_mach_y,
-                                                temperature, grad_temperature)
-        grad_ion_velocity_z = grad_ion_velocity(mach_z, grad_mach_z,
-                                                temperature, grad_temperature)
-        ion_vorticity_p =  vc.curl(None,
+            ## velocity and vorticity
+            ##
+            mach_file = (input_path +
+                         str(u_x_time_points_plus[time_point]).zfill(4) +
+                         '.vtk')
+            mach_x_fields = {}
+            for field in mach_fields_to_read:
+                read = rrv.read_scalar(mach_file, field)
+                mach_x_fields[field] = read[1][ylow:yhigh, xlow:xhigh, zlow:zhigh]
+            mach_x_p = mach_x_fields['mach_y']
+            grad_mach_x_p = (mach_x_fields['mach_y_dx'],
+                             mach_x_fields['mach_y_dy'],
+                             mach_x_fields['mach_y_dz'])
+            mach_file = (input_path +
+                         str(u_x_time_points_minus[time_point]).zfill(4) +
+                         '.vtk')
+            mach_x_fields = {}
+            for field in mach_fields_to_read:
+                read = rrv.read_scalar(mach_file, field)
+                mach_x_fields[field] = read[1][ylow:yhigh, xlow:xhigh, zlow:zhigh]
+            mach_x_m = mach_x_fields['mach_y']
+            grad_mach_x_m = (mach_x_fields['mach_y_dx'],
+                             mach_x_fields['mach_y_dy'],
+                             mach_x_fields['mach_y_dz'])
+            mach_y = fields['mach_y']
+            grad_mach_y = (fields['mach_y_dx'],
+                           fields['mach_y_dy'],
+                           fields['mach_y_dz'])
+            mach_z = fields['mach_z']
+            grad_mach_z = (fields['mach_z_dx'],
+                           fields['mach_z_dy'],
+                           fields['mach_z_dz'])
+            te = temperature
+            u_i_x_plus = np.sqrt(te*q_e/m_i)*mach_x_p
+            u_i_x_minus = np.sqrt(te*q_e/m_i)*mach_x_m
+            u_i_y = np.sqrt(te*q_e/m_i)*mach_y
+            u_i_z = np.sqrt(te*q_e/m_i)*mach_z
+            ion_velocity_p = [u_i_x_plus, u_i_y, u_i_z]
+            ion_velocity_m = [u_i_x_minus, u_i_y, u_i_z]
+            grad_ion_velocity_x_p = grad_ion_velocity(mach_x_p, grad_mach_x_p,
+                                                      temperature, grad_temperature)
+            grad_ion_velocity_x_m = grad_ion_velocity(mach_x_m, grad_mach_x_m,
+                                                      temperature, grad_temperature)
+            grad_ion_velocity_y = grad_ion_velocity(mach_y, grad_mach_y,
+                                                    temperature, grad_temperature)
+            grad_ion_velocity_z = grad_ion_velocity(mach_z, grad_mach_z,
+                                                    temperature, grad_temperature)
+            ion_vorticity_p =  vc.curl(None,
                                    vector_grad=[grad_ion_velocity_x_p,
                                                 grad_ion_velocity_y,
                                                 grad_ion_velocity_z])
-        ion_vorticity_m =  vc.curl(None,
-                                   vector_grad=[grad_ion_velocity_x_m,
-                                                grad_ion_velocity_y,
-                                                grad_ion_velocity_z])
+            ion_vorticity_m =  vc.curl(None,
+                                       vector_grad=[grad_ion_velocity_x_m,
+                                                    grad_ion_velocity_y,
+                                                    grad_ion_velocity_z])
 
-        ion_vorticity_p_smooth = []
-        ion_vorticity_m_smooth = []
-        for direction in xrange(len(ion_vorticity_p)):
-            ion_vorticity_p_smooth.append(boxcar_filter(ion_vorticity_p[direction],
-                                                        args.filter_width,
-                                                        interpolate_nan=interpolate_nan))
-            ion_vorticity_m_smooth.append(boxcar_filter(ion_vorticity_m[direction],
-                                                        args.filter_width,
-                                                        interpolate_nan=interpolate_nan))
-        ion_velocity = ion_velocity_p
-        ion_vorticity = ion_vorticity_p
-        ion_vorticity_smooth = ion_vorticity_p_smooth
+            ion_vorticity_p_smooth = []
+            ion_vorticity_m_smooth = []
+            for direction in xrange(len(ion_vorticity_p)):
+                ion_vorticity_p_smooth.append(boxcar_filter(ion_vorticity_p[direction],
+                                                            args.filter_width,
+                                                            interpolate_nan=interpolate_nan))
+                ion_vorticity_m_smooth.append(boxcar_filter(ion_vorticity_m[direction],
+                                                            args.filter_width,
+                                                            interpolate_nan=interpolate_nan))
+            ion_velocity = ion_velocity_p
+            ion_vorticity = ion_vorticity_p
+            ion_vorticity_smooth = ion_vorticity_p_smooth
 
         ## Vector Potential
         ##
@@ -193,66 +201,92 @@ def main(args):
          b_field_dynamic_ref,
          b_scalar_potential_dynamic_ref) = ref_fields(mesh, b_field_dynamic,
                                                       return_scalar_ref=True)
-        (ion_velocity_smooth_ref,
-         ion_vorticity_smooth_ref,
-         i_scalar_potential_smooth_ref) = ref_fields(mesh, ion_vorticity_smooth,
+        if not just_magnetic:
+            (ion_velocity_smooth_ref,
+             ion_vorticity_smooth_ref,
+             i_scalar_potential_smooth_ref) = ref_fields(mesh, ion_vorticity_smooth,
                                                      return_scalar_ref=True)
-        (ion_velocity_ref,
-         ion_vorticity_ref,
-         i_scalar_potential_ref) = ref_fields(mesh, ion_vorticity,
-                                              return_scalar_ref=True)
+            (ion_velocity_ref,
+             ion_vorticity_ref,
+             i_scalar_potential_ref) = ref_fields(mesh, ion_vorticity,
+                                                  return_scalar_ref=True)
 
-        fields =  ([b_field[0]] + [b_field[1]] + [b_field[2]] +
-                   list(current_smooth) + list(current) +
-                   [density] + [temperature] +
-                   [density_smooth_plane_normalized] +
-                   [temperature_smooth_plane_normalized] +
-                   [density] + [temperature] +
-                   [density_plane_normalized] +
-                   [temperature_plane_normalized] +
-                   list(ion_velocity) +
-                   list(ion_vorticity_smooth) + list(ion_vorticity) +
-                   list(vector_potential) + list(b_field_ref) +
-                   list(vector_potential_ref) + list(ion_velocity_ref) +
-                   list(ion_vorticity_smooth_ref) +
-                   list(ion_vorticity_ref) +
-                   list(b_field_dynamic) +
-                   list(b_field_dynamic_ref) +
-                   list(vector_potential_dynamic) +
-                   list(vector_potential_dynamic_ref) +
-                   [b_scalar_potential_ref] +
-                   [b_scalar_potential_dynamic_ref] +
-                   [i_scalar_potential_smooth_ref] +
-                   [i_scalar_potential_ref])
+            fields = ([b_field[0]] + [b_field[1]] + [b_field[2]] +
+                      list(current_smooth) + list(current) +
+                      [density] + [temperature] +
+                      [density_smooth_plane_normalized] +
+                      [temperature_smooth_plane_normalized] +
+                      [density] + [temperature] +
+                      [density_plane_normalized] +
+                      [temperature_plane_normalized] +
+                      list(ion_velocity) +
+                      list(ion_vorticity_smooth) + list(ion_vorticity) +
+                      list(vector_potential) + list(b_field_ref) +
+                      list(vector_potential_ref) +
+                      list(ion_velocity_ref) +
+                      list(ion_vorticity_smooth_ref) +
+                      list(ion_vorticity_ref) +
+                      list(b_field_dynamic) +
+                      list(b_field_dynamic_ref) +
+                      list(vector_potential_dynamic) +
+                      list(vector_potential_dynamic_ref) +
+                      [b_scalar_potential_ref] +
+                      [b_scalar_potential_dynamic_ref] +
+                      [i_scalar_potential_smooth_ref] +
+                      [i_scalar_potential_ref])
+
+            quantity_names = ['B_x', 'B_y', 'B_z',
+                              'j_x', 'j_y', 'j_z',
+                              'j_raw_x', 'j_raw_y', 'j_raw_z',
+                              'n', 'Te',
+                              'n_plane_normalized', 'Te_plane_normalized',
+                              'n_raw', 'Te_raw',
+                              'n_raw_plane_normalized',
+                              'Te_raw_plane_normalized',
+                              'u_i_x_plus', 'u_i_y', 'u_i_z',
+                              'w_i_x_plus', 'w_i_y_plus', 'w_i_z_plus',
+                              'w_i_raw_x_plus', 'w_i_raw_y_plus', 'w_i_raw_z_plus',
+                              'A_x', 'A_y', 'A_z',
+                              'B_ref_x', 'B_ref_y', 'B_ref_z',
+                              'A_ref_x', 'A_ref_y', 'A_ref_z',
+                              'u_i_ref_x', 'u_i_ref_y', 'u_i_ref_z',
+                              'w_i_ref_x', 'w_i_ref_y', 'w_i_ref_z',
+                              'w_i_raw_ref_x', 'w_i_raw_ref_y', 'w_i_raw_ref_z',
+                              'B_dynamic_x', 'B_dynamic_y', 'B_dynamic_z',
+                              'B_dynamic_ref_x', 'B_dynamic_ref_y', 'B_dynamic_ref_z',
+                              'A_dynamic_x', 'A_dynamic_y', 'A_dynamic_z',
+                              'A_dynamic_ref_x', 'A_dynamic_ref_y', 'A_dynamic_ref_z',
+                              'phi_b_ref',
+                              'phi_b_dynamic_ref',
+                              'phi_i_ref',
+                              'phi_i_raw_ref']
+
+        else:
+            fields = ([b_field[0]] + [b_field[1]] + [b_field[2]] +
+                     list(current_smooth) + list(current) +
+                     list(b_field_dynamic) +
+                     list(b_field_dynamic_ref) +
+                     list(vector_potential_dynamic) +
+                     list(vector_potential_dynamic_ref) +
+                     [b_scalar_potential_ref] +
+                     [b_scalar_potential_dynamic_ref])
+
+            quantity_names = ['B_x', 'B_y', 'B_z',
+                              'j_x', 'j_y', 'j_z',
+                              'j_raw_x', 'j_raw_y', 'j_raw_z',
+                              'A_x', 'A_y', 'A_z',
+                              'B_ref_x', 'B_ref_y', 'B_ref_z',
+                              'A_ref_x', 'A_ref_y', 'A_ref_z',
+                              'B_dynamic_x', 'B_dynamic_y', 'B_dynamic_z',
+                              'B_dynamic_ref_x', 'B_dynamic_ref_y', 'B_dynamic_ref_z',
+                              'A_dynamic_x', 'A_dynamic_y', 'A_dynamic_z',
+                              'A_dynamic_ref_x', 'A_dynamic_ref_y', 'A_dynamic_ref_z',
+                              'phi_b_ref',
+                              'phi_b_dynamic_ref']
+
 
         for i, field in enumerate(fields):
             fields[i] = field.astype('float64')
-
-        quantity_names = ['B_x', 'B_y', 'B_z',
-                          'j_x', 'j_y', 'j_z',
-                          'j_raw_x', 'j_raw_y', 'j_raw_z',
-                          'n', 'Te',
-                          'n_plane_normalized', 'Te_plane_normalized',
-                          'n_raw', 'Te_raw',
-                          'n_raw_plane_normalized',
-                          'Te_raw_plane_normalized',
-                          'u_i_x_plus', 'u_i_y', 'u_i_z',
-                          'w_i_x_plus', 'w_i_y_plus', 'w_i_z_plus',
-                          'w_i_raw_x_plus', 'w_i_raw_y_plus', 'w_i_raw_z_plus',
-                          'A_x', 'A_y', 'A_z',
-                          'B_ref_x', 'B_ref_y', 'B_ref_z',
-                          'A_ref_x', 'A_ref_y', 'A_ref_z',
-                          'u_i_ref_x', 'u_i_ref_y', 'u_i_ref_z',
-                          'w_i_ref_x', 'w_i_ref_y', 'w_i_ref_z',
-                          'w_i_raw_ref_x', 'w_i_raw_ref_y', 'w_i_raw_ref_z',
-                          'B_dynamic_x', 'B_dynamic_y', 'B_dynamic_z',
-                          'B_dynamic_ref_x', 'B_dynamic_ref_y', 'B_dynamic_ref_z',
-                          'A_dynamic_x', 'A_dynamic_y', 'A_dynamic_z',
-                          'A_dynamic_ref_x', 'A_dynamic_ref_y', 'A_dynamic_ref_z',
-                          'phi_b_ref',
-                          'phi_b_dynamic_ref',
-                          'phi_i_ref',
-                          'phi_i_raw_ref']
 
         x, y, z, variables = struc_3d.prepare_for_rectilinear_grid(mesh, fields,
                                                                    quantity_names)
@@ -303,6 +337,10 @@ def parse_args():
     parser.add_argument('--time_steps',
                         help='# of time steps', type=int,
                         default=250)
+    parser.add_argument('--just_magnetic',
+                        help='only calculate magnetic quantities',
+                        action='store_true',
+                        default=False)
     args = parser.parse_args()
     return args
 
