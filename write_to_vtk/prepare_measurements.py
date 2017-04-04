@@ -192,7 +192,9 @@ def read_mach_probe_data(args):
     return mach_y_measurements, mach_z_measurements
 
 
-def cut_and_average_quantity(measurements, box_extent, planes, bounds=None):
+def cut_and_average_quantity(measurements, box_extent, planes, bounds=None, test=False):
+    r"""
+    """
     for plane in planes:
         measurements[plane] = average_duplicate_points(measurements[plane])
     if bounds:
@@ -236,8 +238,6 @@ def remove_points_out_of_bounds(data_dict, lower, upper, planes):
                                                  to_remove))
             new_data_dict[plane]['std'].append(np.delete(data_dict[plane]['std'][time],
                                                          to_remove))
-        new_data_dict[plane]['a_out'] = np.asarray(new_data_dict[plane]['a_out'])
-        new_data_dict[plane]['std'] = np.asarray(new_data_dict[plane]['std'])
         new_data_dict[plane]['delays'] = data_dict[plane]['delays']
     return new_data_dict
 

@@ -41,8 +41,10 @@ def main(args):
                                                 args.by_extent, planes)
     bz_all_planes = pm.cut_and_average_quantity(bz_measurements,
                                                 args.bz_extent, planes)
-    n_all_planes = pm.cut_and_average_quantity(n_measurements, args.n_extent,
-                                               planes, bounds=args.n_bounds)
+    n_all_planes = pm.cut_and_average_quantity(n_measurements,
+                                               args.n_extent,
+                                               planes,
+                                               bounds=args.n_bounds)
     te_all_planes = pm.cut_and_average_quantity(te_measurements, args.te_extent,
                                                 planes, bounds=args.te_bounds)
     mach_y_plane = pm.cut_and_average_quantity(mach_y_measurements, args.mach_y_extent,
