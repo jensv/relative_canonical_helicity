@@ -35,6 +35,7 @@ def remove_points_outside_box(measurements,
                               y_min=-0.016, y_max=0.017,
                               z_min=0.249, z_max=0.416):
     r"""
+    Return measurements dict with points outside cube of given bounds removed.
     """
     points = np.dstack((measurements['x_out'],
                         measurements['y_out'],
@@ -194,8 +195,11 @@ def read_mach_probe_data(args):
 def cut_and_average_quantity(measurements, box_extent, planes, bounds=None):
     for plane in planes:
         measurements[plane] = average_duplicate_points(measurements[plane])
-    if bounds:
-        remove_points_out_of_bounds(measurements, bounds[0], bounds[1], planes)
+    #if bounds:
+    #    measurements = remove_points_out_of_bounds(measurements,
+    #                                               bounds[0],
+    #                                               bounds[1],
+    #                                               planes)
     all_planes = combine_all_planes(measurements, planes)
     if box_extent:
        all_planes = remove_points_outside_box(all_planes, box_extent[0],
@@ -214,7 +218,8 @@ def remove_points_out_of_bounds(data_dict, lower, upper, planes):
     for plane in planes:
         new_data_dict[plane] = {'x_out': [],
                                 'y_out': [],
-                                'a_out': []}
+                                'a_out': [],
+                                'std': []}
         to_remove = []
         for time in xrange(len(data_dict[plane]['a_out'])):
             indexes = (np.where(np.logical_or(data_dict[plane]['a_out'][time] < lower,
@@ -229,7 +234,10 @@ def remove_points_out_of_bounds(data_dict, lower, upper, planes):
         for time in xrange(len(data_dict[plane]['a_out'])):
             new_data_dict[plane]['a_out'].append(np.delete(data_dict[plane]['a_out'][time],
                                                  to_remove))
+            new_data_dict[plane]['std'].append(np.delete(data_dict[plane]['std'][time],
+                                                         to_remove))
         new_data_dict[plane]['a_out'] = np.asarray(new_data_dict[plane]['a_out'])
+        new_data_dict[plane]['std'] = np.asarray(new_data_dict[plane]['std'])
         new_data_dict[plane]['delays'] = data_dict[plane]['delays']
     return new_data_dict
 
