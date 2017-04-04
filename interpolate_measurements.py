@@ -170,7 +170,7 @@ def parse_args():
                         default='../output/boxed_unstructured_measurements/')
     parser.add_argument('--input_date',
                         help='time stamp of input files',
-                        default='2017-02-15-23-46')
+                        default='2017-04-04-11-38')
     parser.add_argument('--input_file_text',
                         help='input file name',
                         default='_boxed_unstructured_')
