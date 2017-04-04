@@ -80,8 +80,7 @@ def define_expressions(visit, alpha=8.1e5):
                                   "J_raw * Te_smooth_normalized^3")
     visit.DefineVectorExpression("J_raw_filtered_by_Te_smooth^4",
                                   "J_raw * Te_smooth_normalized^4")
-  
-    print 'u_i_plus'
+
     visit.DefineVectorExpression("u_i_plus", "{u_i_x_plus, u_i_y, u_i_z}")
     visit.DefineVectorExpression("u_i_plus_perp", "{dot(u_i_plus, {1, 0, 0}), dot(u_i_plus, "
                                  "{0, 1, 0}), 0}")
@@ -175,7 +174,6 @@ def define_expressions(visit, alpha=8.1e5):
 
     ## Omega_e density dependence
     ##
-    print 'Omege_e'
     visit.DefineVectorExpression("Omega_e_density_dependence",
                                  "n*B + cross(gradient(n), A)")
     visit.DefineVectorExpression("Omega_e_density_dependence_perp",
@@ -191,7 +189,6 @@ def define_expressions(visit, alpha=8.1e5):
 
     ## u_i_x(t) = u_i_y(t MINUS tau*0.25)
     ##
-    print 'u_i_minus'
     visit.DefineVectorExpression("u_i_minus",
                                  "{u_i_x_minus, u_i_y, u_i_z}")
     visit.DefineVectorExpression("u_i_minus_perp",
@@ -293,13 +290,11 @@ def define_expressions(visit, alpha=8.1e5):
                                  "dot(Omega_i_raw_minus_times_density, {0, 0, 1})")
 
     ## Canonical momentum fields
-    print 'canonical momentum fields'
     visit.DefineVectorExpression("P_i", "%e*A + %e*u_i_plus" %
                                  (elementary_charge, proton_mass))
     visit.DefineVectorExpression("P_i_times_density", "n*P_i")
 
     ## Reference fields
-    print 'reference_fields'
     visit.DefineVectorExpression("B_ref", "{B_ref_x, B_ref_y, B_ref_z}")
     visit.DefineVectorExpression("A_ref", "{A_ref_x, A_ref_y, A_ref_z}")
     visit.DefineVectorExpression("u_i_ref",
@@ -337,7 +332,6 @@ def define_expressions(visit, alpha=8.1e5):
 
 
     ## Relative fields
-    print 'relative_fields'
     visit.DefineVectorExpression("B_rel", "B + B_ref")
     visit.DefineVectorExpression("B_rel_minus", "B - B_ref")
     visit.DefineVectorExpression("A_rel", "A - A_ref")
@@ -368,7 +362,6 @@ def define_expressions(visit, alpha=8.1e5):
                                  "Omega_i_ref_raw_vort_density_dependence")
 
     ## Dynamic fields
-    print 'dynamic_fields'
     visit.DefineVectorExpression("B_dynamic", "{B_dynamic_x, B_dynamic_y, B_dynamic_z}")
     visit.DefineVectorExpression("A_dynamic", "{A_dynamic_x, A_dynamic_y, A_dynamic_z}")
     visit.DefineVectorExpression("B_dynamic_ref", "{B_dynamic_ref_x,"
@@ -377,7 +370,6 @@ def define_expressions(visit, alpha=8.1e5):
                                                    "A_dynamic_ref_y, A_dynamic_ref_z}")
 
     ## Helicity density
-    print 'density_defs'
     visit.DefineScalarExpression("mag_helicity_density", "dot(A, B)")
     visit.DefineScalarExpression("mag_ref_helicity_density", "dot(A_ref, B_ref)")
     visit.DefineScalarExpression("mag_rel_helicity_density", "dot(A-A_ref, B+B_ref)")
@@ -397,10 +389,8 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineScalarExpression("cross_ref_helicity_density",
                                  "2.*dot(B_ref, u_i_ref)")
     visit.DefineScalarExpression("cross_rel_helicity_density",
-                                 "(dot(u_i_plus - u_i_ref, B + B_ref)" 
+                                 "(dot(u_i_plus - u_i_ref, B + B_ref)"
                                  "+ dot(u_i_plus + u_i_ref, B - B_ref))")
-
-
 
 
 def normalize_scalar(visit, scalar_name,
@@ -717,6 +707,9 @@ def set_default_view(visit):
 
 def set_default_view_lower_angle(visit):
     r"""
+    Set view with lower angle for viewing fluxtubes.
+    If view needs to be modified it is best to align visit with gui and save
+    parameters from visit.GetView3D().
     """
     view = visit.GetView3D()
     view.setViewNormal((-0.776189, 0.193398, 0.600106))
@@ -736,11 +729,14 @@ def set_default_view_lower_angle(visit):
     view.setAxis3DScales((1, 1, 1))
     view.setShear((0, 0, 1))
     view.setWindowValid(0)
-    SetView3D(view)
+    visit.SetView3D(view)
 
 
 def set_positive_x_view(visit):
     r"""
+    Set view along positive x for viewing fluxtubes.
+    If view needs to be modified it is best to align visit with gui and save
+    parameters from visit.GetView3D().
     """
     view = visit.GetView3D()
     view.SetViewNormal((-0.00997631, 0.0600385, 0.0335938))
@@ -787,6 +783,9 @@ def set_postive_z_view(visit):
 
 def set_negative_z_view(visit):
     r"""
+    Set view along negative z for viewing fluxtubes.
+    If view needs to be modified it is best to align visit with gui and save
+    parameters from visit.GetView3D().
     """
     view = visit.GetView3D()
     view.SetViewNormal((-0.00894299, -0.00985814, 0.999911))
@@ -866,7 +865,7 @@ def main():
 
     output_path = out_dir + '/' + args.output_prefix
     print 'data_path', database_prefix + args.database_postfix
-    visit.OpenDatabase(database_prefix + args.database_postfix)
+    visit.OpenDatabase(database_prefix + args.database_postfix + "*.vtk database")
     define_expressions(visit, args.alpha_constant)
     field_nulls = np.loadtxt(args.field_nulls)
     AnnotationAtts = setup_annotations(visit, time_scale=args.time_scale)
@@ -874,7 +873,8 @@ def main():
     plot_count = 0
 
     if args.current_plane:
-        PseudocolorAtts, SliceAtts = setup_current_pseudocolor(visit, max_val=args.current_max,
+        PseudocolorAtts, SliceAtts = setup_current_pseudocolor(visit,
+                                                               max_val=args.current_max,
                                                                min_val=args.current_min)
         plot_count += 1
     if args.temperature_tubes:
@@ -909,19 +909,6 @@ def main():
                                                                          outer_color=aqua,
                                                                          inner_color=navy)
         plot_count += 2
-    #elif args.current:
-    #    stream_line_func = setup_backward_and_B_stream
-    #    current_thetas = full_circle_thetas(20)
-    #    B_thetas = full_circle_thetas(10)
-    #    current_launch_points = launch_points(field_nulls[0],
-    #                                          current_thetas,
-    #                                          radius=0.001)
-    #    B_launch_points = launch_points(field_nulls[0],
-    #                                    B_thetas,
-    #                                    radius=0.005)
-    #    params = {'visit': visit, 'name': args.current_to_use,
-    #              'launch_points': current_launch_points,
-    #              'B_launch_points': B_launch_points}
 
     if args.view == 'default':
         set_default_view(visit)
