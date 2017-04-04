@@ -195,11 +195,11 @@ def read_mach_probe_data(args):
 def cut_and_average_quantity(measurements, box_extent, planes, bounds=None):
     for plane in planes:
         measurements[plane] = average_duplicate_points(measurements[plane])
-    #if bounds:
-    #    measurements = remove_points_out_of_bounds(measurements,
-    #                                               bounds[0],
-    #                                               bounds[1],
-    #                                               planes)
+    if bounds:
+        measurements = remove_points_out_of_bounds(measurements,
+                                                    bounds[0],
+                                                    bounds[1],
+                                                    planes)
     all_planes = combine_all_planes(measurements, planes)
     if box_extent:
        all_planes = remove_points_outside_box(all_planes, box_extent[0],
