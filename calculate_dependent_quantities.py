@@ -305,7 +305,7 @@ def parse_args():
                         default='../output/data_interp_to_rect_grid/')
     parser.add_argument('--input_date',
                         help='time stamp of input files',
-                        default='2017-02-16-23-44')
+                        default='2017-04-04-13-51')
     parser.add_argument('--input_file_text',
                         help='input file name',
                         default='data_interp_to_rect_grid')
