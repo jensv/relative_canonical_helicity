@@ -43,6 +43,8 @@ def define_expressions(visit, alpha=8.1e5):
     visit.DefineVectorExpression("B_para", "{0, 0, B_z}")
     visit.DefineScalarExpression("B_para_scalar", "B_z")
 
+    visit.DefineVectorExpression("Omega_e_times_density", "B*n")
+
     visit.DefineVectorExpression("A_vacuum", "{A_vacuum_x, A_vacuum_y, 0}")
     visit.DefineVectorExpression("A", "{A_x, A_y, A_z}")
 
@@ -483,12 +485,13 @@ def setup_scalar_isosurface(visit, quantity,
     return PseudocolorAtts, IsosurfaceAtts
 
 
-def setup_current_pseudocolor(visit, colortable="Greens", max_val=None,
+def setup_current_pseudocolor(visit, current_to_use,
+                              colortable="Greens", max_val=None,
                               min_val=None):
     r"""
     Setup pseudocolor current plot.
     """
-    visit.AddPlot("Pseudocolor", "J_smooth_mag", 1, 0)
+    visit.AddPlot("Pseudocolor", current_to_use, 1, 0)
     PseudocolorAtts = visit.PseudocolorAttributes()
     PseudocolorAtts.scaling = PseudocolorAtts.Linear
     PseudocolorAtts.limitsMode = PseudocolorAtts.OriginalData
@@ -519,7 +522,7 @@ def setup_massless_electron_canonical_flux_tubes(visit, points_outer,
     Setup two massless electron canonical flux tubes i.e. magnetic flux tubes.
     Intended to be inner and outer flux tubes.
     """
-    visit.AddPlot("Streamline", "B", 1, 0)
+    visit.AddPlot("Streamline", "Omega_e_times_density", 1, 0)
     StreamlineAtts_outer = visit.StreamlineAttributes()
     StreamlineAtts_outer.sourceType = StreamlineAtts_outer.SpecifiedPointList
     StreamlineAtts_outer.SetPointList(points_outer)
@@ -529,7 +532,7 @@ def setup_massless_electron_canonical_flux_tubes(visit, points_outer,
     StreamlineAtts_outer.legendFlag = 0
     visit.SetPlotOptions(StreamlineAtts_outer)
 
-    visit.AddPlot("Streamline", "B", 1, 0)
+    visit.AddPlot("Streamline", "Omega_e_times_density", 1, 0)
     StreamlineAtts_inner = visit.StreamlineAttributes()
     StreamlineAtts_inner.sourceType = StreamlineAtts_inner.SpecifiedPointList
     StreamlineAtts_inner.SetPointList(points_inner)
@@ -582,7 +585,6 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
     direction, one integrating in the backward direction.
     """
     visit.AddPlot("Streamline", "Omega_i", 1, 0)
-
     StreamlineAtts_forward = visit.StreamlineAttributes()
     StreamlineAtts_forward.sourceType = StreamlineAtts_forward.SpecifiedPointList
     StreamlineAtts_forward.SetPointList(points_foward)
@@ -874,6 +876,7 @@ def main():
 
     if args.current_plane:
         PseudocolorAtts, SliceAtts = setup_current_pseudocolor(visit,
+                                                               args.current_to_use,
                                                                max_val=args.current_max,
                                                                min_val=args.current_min)
         plot_count += 1
@@ -980,6 +983,9 @@ def main():
             plot_number += 1
 
         points_outer, points_inner = launch_points_inner_outer(field_nulls[time_point])
+        if args.stationary_tube:
+            points_outer, points_inner = launch_points_inner_outer(args.stationary_center)
+
 
         if args.ion:
             visit.SetActivePlots(plot_number)
@@ -1027,7 +1033,7 @@ def parse_args():
                         default='/canonical_quantities')
     parser.add_argument('database_date', help='date of data run YYYY-MM-DD-mm-ss')
     parser.add_argument('--output_prefix', help='output_file_prefix',
-                        default='electron_canonical_flux_tubes_')
+                        default='canonical_flux_tubes_')
     parser.add_argument('--current_min', help='minimum for current color map', default=0.0)
     parser.add_argument('--current_max', help='maximum for current color map', default=5.1e5)
     parser.add_argument('--start_time_point', help='time point of first output frame', type=int, default=0)
@@ -1035,8 +1041,6 @@ def parse_args():
     parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
                         default='/home/jensv/rsx/jens_analysis/output/centroid_fitting/2016-08-12/field_nulls.txt')
     parser.add_argument('--time_scale', help='time scale of time steps', default=0.068)
-    parser.add_argument('--alpha_constant', help='value of spatially constant alpha',
-                        type=int, default=8.1e5)
     parser.add_argument('--current_plane', help='plot temperature contours',
                         action='store_true', default=False)
     parser.add_argument('--temperature_tubes', help='plot temperature isosurfaces',
@@ -1050,8 +1054,8 @@ def parse_args():
                         help='plot thin current flux tube surrounded by electron / magnetic flux tube',
                         action='store_true', default=False)
     parser.add_argument('--interactive_session', action='store_true', default=False)
-    parser.add_argument('--current_to_use', default='J_raw')
-    parser.add_argument('--omega_to_use', default='Omega_i_raw_plus')
+    parser.add_argument('--current_to_use', default='J_smooth_perp')
+    parser.add_argument('--omega_to_use', default='Omega_i_raw_plus_times_density')
     parser.add_argument('--view', help='pre-configured_views: default, default_lower_angle, positive_z, negative_z, positive_x', default='default')
     parser.add_argument('--wait_for_manual_settings',
                         help='flag makes program wait for input before rendering time series.',
