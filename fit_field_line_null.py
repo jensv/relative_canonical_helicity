@@ -71,7 +71,8 @@ def main(args):
         bx_interpolator = struc_3d.get_interpolator(bx_points, bx_values)
         by_interpolator = struc_3d.get_interpolator(by_points, by_values)
         bz_interpolator = struc_3d.get_interpolator(bz_points, bz_values)
-        grid_extent = bxby_extent
+        grid_extent = [bxby_extent[0], bxby_extent[1],
+                       -0.02, bxby_extent[3]]
         grid = np.meshgrid(np.linspace(grid_extent[0], grid_extent[1],
                                        (grid_extent[1] - grid_extent[0])/
                                        args.spatial_increment),
