@@ -153,9 +153,11 @@ def find_field_null(grid, bx_interpolator, by_interpolator,
         stream2 = odeint(d_l, launch_point, t2, args=(bx_interpolator, by_interpolator))
         stream1 = odeint(d_l, launch_point, t1, args=(bx_interpolator, by_interpolator))
         streamline = np.concatenate((stream1, stream2))
-        size = streamline[np.invert(np.isnan(streamline))].size
-        streamline = streamline[np.invert(np.isnan(streamline))].reshape(int(size/2.), 2)
-
+        size0 = np.sum(np.invert(np.isnan(streamline[:, 0])))
+        size1 = np.sum(np.invert(np.isnan(streamline[:, 1])))
+        min_index = np.argmin([size0, size1])
+        min_size = [size0, size1][min_index]
+        streamline = streamline[np.invert(np.isnan(streamline[:, min_index]))].reshape(min_size, 2)
         circle_params, success = leastsq(to_min, params_guess,
                                          args=np.asarray([streamline[:, 0],
                                                           streamline[:, 1]]))
