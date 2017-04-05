@@ -32,7 +32,7 @@ green = (0, 154, 0, 255)
 navy = (0, 0, 128, 255)
 aqua = (0, 255, 255, 255)
 
-def define_expressions(visit, alpha=8.1e5):
+def define_expressions(visit):
     r"""
     Define Visit expressions.
     """
@@ -861,14 +861,14 @@ def main():
 
     if args.interactive_session:
        visit.OpenDatabase(database_prefix + args.database_postfix + "*.vtk database")
-       define_expressions(visit, args.alpha_constant)
+       define_expressions(visit)
        visit.OpenGUI()
        return
 
     output_path = out_dir + '/' + args.output_prefix
     print 'data_path', database_prefix + args.database_postfix
     visit.OpenDatabase(database_prefix + args.database_postfix + "*.vtk database")
-    define_expressions(visit, args.alpha_constant)
+    define_expressions(visit)
     field_nulls = np.loadtxt(args.field_nulls)
     AnnotationAtts = setup_annotations(visit, time_scale=args.time_scale)
 
