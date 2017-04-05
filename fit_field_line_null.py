@@ -49,7 +49,6 @@ def main(args):
 
     for time_point in xrange(args.time_steps):
         print time_point
-        time_point = 3
         time_str = str(time_point).zfill(4)
         bx_points, bx_values = read_unstructured_vtk(in_dir + 'bx' +
                                                      in_file + time_str + '.vtk')
@@ -205,7 +204,7 @@ def parse_args():
                         default='../output/boxed_unstructured_measurements/')
     parser.add_argument('--input_date',
                         help='time stamp of input files',
-                        default='2017-02-15-23-46')
+                        default='2017-04-04-13-44')
     parser.add_argument('--input_file_text',
                         help='input file name',
                         default='_boxed_unstructured_')
