@@ -223,7 +223,7 @@ def parse_args():
     parser.add_argument('--bxby_extent_0',
                         help='overlapping spatial extent of bx by',
                         nargs=6, type=float,
-                        default=[-0.032, 0.025, -0.057, 0.034, 0.249, 0.416])
+                        default=[-0.027, 0.025, -0.057, 0.041, 0.249, 0.416])
     parser.add_argument('--bxby_extent_1',
                         help='overlapping spatial extent of bx by',
                         nargs=6, type=float,
