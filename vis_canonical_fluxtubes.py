@@ -887,7 +887,7 @@ def main():
         setup_scalar_isosurface(visit, "n_plane_normalized", colortable="Greys")
         plot_count += 1
 
-    if args.statonary_tube:
+    if args.stationary_tube:
         points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
     else:
         points_outer, points_inner = launch_points_inner_outer(args.stationary_center)
