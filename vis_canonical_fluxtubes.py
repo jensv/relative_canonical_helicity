@@ -15,8 +15,8 @@ from glob import glob
 import sys
 visit_path1 = "/home/jensv/visit/visit2_10_3.linux-x86_64/2.10.3/linux-x86_64/lib/site-packages"
 visit_path2 = "/home/jensv/visit/visit2_10_3.linux-x86_64/bin/"
-sys.path.append("/home/jensv/visit/visit2_10_3.linux-x86_64/2.10.3/linux-x86_64/lib/site-packages")
-sys.path.append("/home/jensv/visit/visit2_10_3.linux-x86_64/bin/")
+sys.path.append(visit_path1)
+sys.path.append(visit_path2)
 os.environ["PATH"] += os.pathsep + visit_path1
 os.environ["PATH"] += os.pathsep + visit_path2
 import visit
