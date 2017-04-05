@@ -887,7 +887,10 @@ def main():
         setup_scalar_isosurface(visit, "n_plane_normalized", colortable="Greys")
         plot_count += 1
 
-    points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
+    if args.statonary_tube:
+        points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
+    else:
+        points_outer, points_inner = launch_points_inner_outer(args.stationary_center)
     if args.ion:
         (StreamlineAtts_ion_outer,
          StreamlineAtts_ion_inner) = setup_outer_inner_ion_canonical_flux_tubes(visit,
@@ -1067,6 +1070,14 @@ def parse_args():
     parser.add_argument('--turn_off_density_start', help='time step at which to start turning off density cloud.', type=int, default=None)
     parser.add_argument('--turn_off_density_end', help='time step at which to end turning off density cloud', type=int, default=None)
     parser.add_argument('--velocity', action='store_true', default=False)
+    parser.add_argument('--stationary_tube', help="flag to hold flux tube launch point"
+                        "stationary",
+                        action='store_true', default=False)
+    parser.add_argument('--stationary_center',
+                        help='launch_point of stationary tube',
+                        nargs=2,
+                        type=float,
+                        default = [0, 0])
     args = parser.parse_args()
     return args
 
