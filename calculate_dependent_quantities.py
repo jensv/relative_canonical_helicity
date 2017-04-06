@@ -176,7 +176,7 @@ def main(args):
                                                               args.filter_width, mode='nearest'))
                 ion_vorticity_m_smooth.append(gaussian_filter(ion_vorticity_m[direction],
                                                               args.filter_width,
-                                                              mode=='nearest'))
+                                                              mode='nearest'))
             ion_velocity = ion_velocity_p
             ion_vorticity = ion_vorticity_p
             ion_vorticity_smooth = ion_vorticity_p_smooth
