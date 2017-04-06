@@ -426,6 +426,7 @@ def launch_points_inner_outer(center, plane=0.249,
                                  plane=plane)
 
     cut_point = points_outer[num_outer]
+    print 'cut_point', cut_point 
     if return_cut_point:
         return points_outer, points_inner, cut_point
     else:
