@@ -425,8 +425,8 @@ def launch_points_inner_outer(center, plane=0.249,
     points_inner = launch_points(center, thetas, radius=radius_inner,
                                  plane=plane)
 
-    cut_point_x = points_outer[num_outer*3]
-    cut_point_y = points_outer[num_outer*3+1]
+    cut_point_x = points_outer[(num_outer+2)*3]
+    cut_point_y = points_outer[(num_outer+2)*3+1]
     cut_point = [cut_point_x, cut_point_y]
     if return_cut_point:
         return points_outer, points_inner, cut_point
