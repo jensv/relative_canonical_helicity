@@ -412,7 +412,8 @@ def normalize_scalar(visit, scalar_name,
 
 def launch_points_inner_outer(center, plane=0.249,
                               radius_inner=0.001, radius_outer=0.005,
-                              num_inner=80, num_outer=60):
+                              num_inner=80, num_outer=60,
+                              return_cut_point=False):
     r"""
     Calculate points on a circle outline for a given center point.
     """
@@ -424,7 +425,11 @@ def launch_points_inner_outer(center, plane=0.249,
     points_inner = launch_points(center, thetas, radius=radius_inner,
                                  plane=plane)
 
-    return points_outer, points_inner
+    cut_point = points_outer[num_outer]
+    if return_cut_point:
+        return points_outer, points_inner, cut_point
+    else:
+        return points_outer, points_inner
 
 
 def full_circle_thetas(num_points):
@@ -474,6 +479,7 @@ def setup_scalar_isosurface(visit, quantity,
 
     visit.AddOperator("Isosurface", 0)
     IsosurfaceAtts = visit.IsosurfaceAttributes()
+
     IsosurfaceAtts.contourNLevels = 5
     IsosurfaceAtts.contourValue = ()
     IsosurfaceAtts.contourPercent = ()
@@ -485,9 +491,8 @@ def setup_scalar_isosurface(visit, quantity,
     visit.SetOperatorOptions(IsosurfaceAtts, 0)
     return PseudocolorAtts, IsosurfaceAtts
 
-
 def setup_current_pseudocolor(visit, current_to_use,
-                              colortable="BrBG", max_val=1e6,
+                              colortable="BrBG", max_val=1e,
                               min_val=-1e6, invert=True):
     r"""
     Setup pseudocolor current plot.
@@ -890,9 +895,13 @@ def main():
         plot_count += 1
 
     if args.stationary_tube:
-        points_outer, points_inner = launch_points_inner_outer(field_nulls[0])
+        (points_outer, points_inner,
+         cut_point) = launch_points_inner_outer(field_nulls[0],
+                                                return_cut_point=True)
     else:
-        points_outer, points_inner = launch_points_inner_outer(args.stationary_center)
+        (points_outer, points_inner,
+         cut_point) = launch_points_inner_outer(args.stationary_center,
+                                                return_cut_point=True)
     if args.ion:
         (StreamlineAtts_ion_outer,
          StreamlineAtts_ion_inner) = setup_outer_inner_ion_canonical_flux_tubes(visit,
@@ -906,7 +915,10 @@ def main():
          StreamlineAtts_electron_inner) = setup_massless_electron_canonical_flux_tubes(visit,
                                                                                        points_outer,
                                                                                        points_inner)
-        plot_count += 2
+        cut_point[1] += 0.0003
+        FieldLineAtts = setup_field_line(visit, 'Omega_e_times_density',
+                                         launch_point=cut_point)
+        plot_count += 3
 
     if args.velocity:
         (velocity_stream_1,
@@ -987,9 +999,15 @@ def main():
         if args.density_tubes:
             plot_number += 1
 
-        points_outer, points_inner = launch_points_inner_outer(field_nulls[time_point])
+        (points_outer,
+         points_inner,
+         cut_point) = launch_points_inner_outer(field_nulls[time_point],
+                                                return_cut_point=True)
         if args.stationary_tube:
-            points_outer, points_inner = launch_points_inner_outer(args.stationary_center)
+            (points_outer,
+             points_inner,
+             cut_point) = launch_points_inner_outer(args.stationary_center,
+                                                    return_cut_point=True)
 
 
         if args.ion:
@@ -1013,6 +1031,14 @@ def main():
             StreamlineAtts_electron_inner.SetPointList(points_inner)
             visit.SetPlotOptions(StreamlineAtts_electron_inner)
             plot_number +=1
+
+            cut_point[1] += 0.0003
+            visit.SetActivePlots(plot_number)
+            FieldLineAtts.SetPointSource(cut_point[0],
+                                         cut_point[1],
+                                         0.249)
+            visit.SetPlotOptions(FieldLineAtts)
+            plot_number += 1
 
         if args.velocity:
             visit.SetActivePlots(plot_number)
