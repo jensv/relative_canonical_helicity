@@ -492,7 +492,7 @@ def setup_scalar_isosurface(visit, quantity,
     return PseudocolorAtts, IsosurfaceAtts
 
 def setup_current_pseudocolor(visit, current_to_use,
-                              colortable="BrBG", max_val=1e,
+                              colortable="BrBG", max_val=1e6,
                               min_val=-1e6, invert=True):
     r"""
     Setup pseudocolor current plot.
