@@ -320,7 +320,7 @@ def parse_args():
                         default=[0, None, 3, None, 0, -1])
     parser.add_argument('--filter_width',
                         help='width of boxcar filter for derivatives',
-                        type=float, default=10)
+                        type=float, default=5)
     parser.add_argument('--interpolate_nan',
                         help='use astropy option to interpolate nans before filtering' +
                         ' may not work well because nans are usually located at edge.',
