@@ -88,9 +88,12 @@ def main(args):
                                                          bz_grad]))
         current_smooth = []
         for direction in xrange(len(current)):
-            current_smooth.append(gaussian_filter(current[direction],
-                                                  args.filter_width,
-                                                  mode='reflect'))
+            current_dir = np.array(current[direction])
+            for z_step in xrange(len(current[0, 0, :])):
+                current_dir[:, :, z_step].append(gaussian_filter(current_dir[:, :, z_step],
+                                                                 args.filter_width,
+                                                                 mode='reflect'))
+            current_smooth.append(current_dir)
 
         ## density and temperature
         ##
