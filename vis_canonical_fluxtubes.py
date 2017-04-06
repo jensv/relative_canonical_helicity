@@ -1039,8 +1039,8 @@ def parse_args():
     parser.add_argument('database_date', help='date of data run YYYY-MM-DD-mm-ss')
     parser.add_argument('--output_prefix', help='output_file_prefix',
                         default='canonical_flux_tubes_')
-    parser.add_argument('--current_min', help='minimum for current color map', default=0.0)
-    parser.add_argument('--current_max', help='maximum for current color map', default=5.1e5)
+    parser.add_argument('--current_min', help='minimum for current color map', default=-7.0e5)
+    parser.add_argument('--current_max', help='maximum for current color map', default=7.0e5)
     parser.add_argument('--start_time_point', help='time point of first output frame', type=int, default=0)
     parser.add_argument('--end_time_point', help='time point of last output frame', type=int, default=250)
     parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
