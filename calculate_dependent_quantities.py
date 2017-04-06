@@ -11,6 +11,7 @@ from scipy.constants import mu_0
 from scipy.constants import elementary_charge as q_e
 from scipy.constants import proton_mass as m_i
 from astropy.convolution import convolve, convolve_fft
+from scipy.ndimage import gaussian_filter
 from scipy.signal import fftconvolve
 import scipy
 from datetime import date
@@ -87,9 +88,9 @@ def main(args):
                                                          bz_grad]))
         current_smooth = []
         for direction in xrange(len(current)):
-            current_smooth.append(boxcar_filter(current[direction],
-                                                args.filter_width,
-                                                interpolate_nan=interpolate_nan))
+            current_smooth.append(gaussian_filter(current[direction],
+                                                  args.filter_width,
+                                                  mode='nearest'))
 
         ## density and temperature
         ##
@@ -171,12 +172,11 @@ def main(args):
             ion_vorticity_p_smooth = []
             ion_vorticity_m_smooth = []
             for direction in xrange(len(ion_vorticity_p)):
-                ion_vorticity_p_smooth.append(boxcar_filter(ion_vorticity_p[direction],
-                                                            args.filter_width,
-                                                            interpolate_nan=interpolate_nan))
-                ion_vorticity_m_smooth.append(boxcar_filter(ion_vorticity_m[direction],
-                                                            args.filter_width,
-                                                            interpolate_nan=interpolate_nan))
+                ion_vorticity_p_smooth.append(gaussian_filter(ion_vorticity_p[direction],
+                                                              args.filter_width, mode='nearest'))
+                ion_vorticity_m_smooth.append(gaussian_filter(ion_vorticity_m[direction],
+                                                              args.filter_width,
+                                                              mode=='nearest'))
             ion_velocity = ion_velocity_p
             ion_vorticity = ion_vorticity_p
             ion_vorticity_smooth = ion_vorticity_p_smooth
