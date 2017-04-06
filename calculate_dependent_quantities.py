@@ -90,7 +90,7 @@ def main(args):
         for direction in xrange(len(current)):
             current_smooth.append(gaussian_filter(current[direction],
                                                   args.filter_width,
-                                                  mode='nearest'))
+                                                  mode='reflect'))
 
         ## density and temperature
         ##
@@ -173,10 +173,10 @@ def main(args):
             ion_vorticity_m_smooth = []
             for direction in xrange(len(ion_vorticity_p)):
                 ion_vorticity_p_smooth.append(gaussian_filter(ion_vorticity_p[direction],
-                                                              args.filter_width, mode='nearest'))
+                                                              args.filter_width, mode='reflect'))
                 ion_vorticity_m_smooth.append(gaussian_filter(ion_vorticity_m[direction],
                                                               args.filter_width,
-                                                              mode='nearest'))
+                                                              mode='reflect'))
             ion_velocity = ion_velocity_p
             ion_vorticity = ion_vorticity_p
             ion_vorticity_smooth = ion_vorticity_p_smooth
@@ -320,7 +320,7 @@ def parse_args():
                         default=[0, None, 3, None, 0, -1])
     parser.add_argument('--filter_width',
                         help='width of boxcar filter for derivatives',
-                        type=float, default=15)
+                        type=float, default=10)
     parser.add_argument('--interpolate_nan',
                         help='use astropy option to interpolate nans before filtering' +
                         ' may not work well because nans are usually located at edge.',
