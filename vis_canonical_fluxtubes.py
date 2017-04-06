@@ -425,8 +425,8 @@ def launch_points_inner_outer(center, plane=0.249,
     points_inner = launch_points(center, thetas, radius=radius_inner,
                                  plane=plane)
 
-    cut_point_x = points_outer[(num_outer+2)*3]
-    cut_point_y = points_outer[(num_outer+2)*3+1]
+    cut_point_x = points_outer[(num_outer-1)*3]
+    cut_point_y = points_outer[(num_outer-1)*3+1]
     cut_point = [cut_point_x, cut_point_y]
     if return_cut_point:
         return points_outer, points_inner, cut_point
@@ -917,7 +917,7 @@ def main():
          StreamlineAtts_electron_inner) = setup_massless_electron_canonical_flux_tubes(visit,
                                                                                        points_outer,
                                                                                        points_inner)
-        cut_point[1] += 0.0003
+        cut_point[1] += 0.0005
         FieldLineAtts = setup_field_line(visit, 'Omega_e_times_density',
                                          launch_point=cut_point)
         plot_count += 3
@@ -1034,7 +1034,7 @@ def main():
             visit.SetPlotOptions(StreamlineAtts_electron_inner)
             plot_number +=1
 
-            cut_point[1] += 0.0003
+            cut_point[1] += 0.0005
             visit.SetActivePlots(plot_number)
             FieldLineAtts.SetPointSource(cut_point[0],
                                          cut_point[1],
