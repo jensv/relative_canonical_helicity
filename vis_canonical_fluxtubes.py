@@ -52,6 +52,7 @@ def define_expressions(visit):
     visit.DefineScalarExpression("J_smooth_mag", "sqrt(j_x^2 + j_y^2 + j_z^2)")
     visit.DefineVectorExpression("J_smooth_perp", "{j_x, j_y, 0}")
     visit.DefineVectorExpression("J_smooth_para", "{0, 0, j_z}")
+    visit.DefineVectorExpression("J_smooth_para_mag", "j_z")
 
     visit.DefineVectorExpression("J_raw", "{j_raw_x, j_raw_y, j_raw_z}")
     visit.DefineScalarExpression("J_raw_mag", "sqrt(j_raw_x^2 +" +
@@ -486,8 +487,8 @@ def setup_scalar_isosurface(visit, quantity,
 
 
 def setup_current_pseudocolor(visit, current_to_use,
-                              colortable="Greens", max_val=None,
-                              min_val=None):
+                              colortable="BrBG", max_val=1e6,
+                              min_val=-1e6, invert=True):
     r"""
     Setup pseudocolor current plot.
     """
@@ -496,6 +497,7 @@ def setup_current_pseudocolor(visit, current_to_use,
     PseudocolorAtts.scaling = PseudocolorAtts.Linear
     PseudocolorAtts.limitsMode = PseudocolorAtts.OriginalData
     PseudocolorAtts.colorTableName = colortable
+    PseudocolorAtts.invertColorTable = invert
 
     if max_val:
         PseudocolorAtts.maxFlag = 1
@@ -1057,7 +1059,7 @@ def parse_args():
                         help='plot thin current flux tube surrounded by electron / magnetic flux tube',
                         action='store_true', default=False)
     parser.add_argument('--interactive_session', action='store_true', default=False)
-    parser.add_argument('--current_to_use', default='J_smooth_perp')
+    parser.add_argument('--current_to_use', default='j_z')
     parser.add_argument('--omega_to_use', default='Omega_i_raw_plus_times_density')
     parser.add_argument('--view', help='pre-configured_views: default, default_lower_angle, positive_z, negative_z, positive_x', default='default')
     parser.add_argument('--wait_for_manual_settings',
