@@ -494,7 +494,7 @@ def setup_scalar_isosurface(visit, quantity,
     return PseudocolorAtts, IsosurfaceAtts
 
 def setup_current_pseudocolor(visit, current_to_use,
-                              colortable="BrBG", max_val=1e6,
+                              colortable="PRGn_Stepped", max_val=1e6,
                               min_val=-1e6, invert=True):
     r"""
     Setup pseudocolor current plot.
@@ -521,6 +521,9 @@ def setup_current_pseudocolor(visit, current_to_use,
     SliceAtts.axisType = SliceAtts.ZAxis
     SliceAtts.project2d = 0
     visit.SetOperatorOptions(SliceAtts, 0)
+
+    colorbar = visit.GetAnnotationObject('Plot0000')
+    colorbar.SetDrawMinMax(0)
 
     return PseudocolorAtts, SliceAtts
 
@@ -662,6 +665,7 @@ def setup_field_line(visit, quantity,
     StreamlineAtts_line.singleColor = color
     StreamlineAtts_line.legendFlag = 0
     StreamlineAtts_line.showSeeds = 0
+    StreamlineAtts_line.lineWidth = 8
     visit.SetPlotOptions(StreamlineAtts_line)
     return StreamlineAtts_line
 
@@ -704,7 +708,7 @@ def set_default_view(visit):
     view.SetParallelScale(0.088383)
     view.SetNearPlane(-0.176766)
     view.SetImagePan((0, 0))
-    view.SetImageZoom(1)
+    view.SetImageZoom(1.5)
     view.SetPerspective(1)
     view.SetEyeAngle(2)
     view.SetCenterOfRotationSet(0)
@@ -714,6 +718,20 @@ def set_default_view(visit):
     view.SetShear((0, 0, 1))
     view.SetWindowValid(0)
     visit.SetView3D(view)
+
+
+def set_default_lighting(visit):
+    r"""
+    Set lightening to light up contour plot in z=0.249 plane
+    when default view is used.
+    """
+    light0 = visit.LightAttributes()
+    light0.enabledFlag = 1
+    light0.type = light0.Camera
+    light0.direction = (-0.5, 0, -0.5)
+    light0.color = (255, 255, 255, 255)
+    light0.brightness = 1
+    visit.SetLight(0, light0)
 
 
 def set_default_view_lower_angle(visit):
@@ -854,6 +872,16 @@ def set_save_settings(visit):
     visit.SetSaveWindowAttributes(save_atts)
     return save_atts
 
+
+def setup_slider(visit):
+    r"""
+    Add a time slider with us text label.
+    """
+    slider = visit.CreateAnnotationObject("TimeSlider")
+    slider.SetText("$time us")
+    slider.SetRounded(0)
+
+
 def main():
     r"""
     """
@@ -942,7 +970,8 @@ def main():
         set_negative_z_view(visit)
     elif args.view == 'positive_x':
         set_positive_x_view(visit)
-
+    set_default_lighting(visit)
+    setup_slider(visit)
 
     if args.double_stream:
         stream_launch_point = (field_nulls[args.start_time_point][0] + args.x_offset,
@@ -988,6 +1017,7 @@ def main():
         visit.OpenGUI()
         comment = raw_input()
 
+    visit.ResizeWindow(1, 1920, 1080)
     for time_point in xrange(args.start_time_point, args.end_time_point):
         print time_point
         plot_number = 0
@@ -1067,8 +1097,8 @@ def parse_args():
     parser.add_argument('database_date', help='date of data run YYYY-MM-DD-mm-ss')
     parser.add_argument('--output_prefix', help='output_file_prefix',
                         default='canonical_flux_tubes_')
-    parser.add_argument('--current_min', help='minimum for current color map', default=-7.0e5)
-    parser.add_argument('--current_max', help='maximum for current color map', default=7.0e5)
+    parser.add_argument('--current_min', help='minimum for current color map', default=-3.5e5)
+    parser.add_argument('--current_max', help='maximum for current color map', default=3.5e5)
     parser.add_argument('--start_time_point', help='time point of first output frame', type=int, default=0)
     parser.add_argument('--end_time_point', help='time point of last output frame', type=int, default=250)
     parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
