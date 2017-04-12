@@ -159,8 +159,6 @@ def find_field_null(grid, bx_interpolator, by_interpolator,
         min_index = np.argmin([size0, size1])
         min_size = [size0, size1][min_index]
         streamline = streamline[np.invert(np.isnan(streamline[:, min_index]))].reshape(min_size, 2)
-        print 'x', streamline[:, 0].shape, streamline[:, 0]
-        print 'y', streamline[:, 1].shape, streamline[:, 1]
         circle_params, success = leastsq(to_min, params_guess,
                                          args=np.asarray([streamline[:, 0],
                                                           streamline[:, 1]]))
