@@ -159,6 +159,8 @@ def find_field_null(grid, bx_interpolator, by_interpolator,
         min_index = np.argmin([size0, size1])
         min_size = [size0, size1][min_index]
         streamline = streamline[np.invert(np.isnan(streamline[:, min_index]))].reshape(min_size, 2)
+        print 'x', streamline[:, 0].shape, streamline[:, 0]
+        print 'y', streamline[:, 1].shape, streamline[:, 1]
         circle_params, success = leastsq(to_min, params_guess,
                                          args=np.asarray([streamline[:, 0],
                                                           streamline[:, 1]]))
@@ -224,7 +226,7 @@ def parse_args():
     parser.add_argument('--bxby_extent_0',
                         help='overlapping spatial extent of bx by',
                         nargs=6, type=float,
-                        default=[-0.027, 0.025, -0.057, 0.041, 0.249, 0.416])
+                        default=[-0.027, 0.025, -0.057, 0.037, 0.249, 0.416])
     parser.add_argument('--bxby_extent_1',
                         help='overlapping spatial extent of bx by',
                         nargs=6, type=float,
