@@ -117,7 +117,7 @@ def to_min(params, points):
 
 
 def find_field_null(grid, bx_interpolator, by_interpolator,
-                    distance_thres=0.001, filter_size=5,
+                    distance_thres=0.001, filter_size=2,
                     integration_length=10, integration_steps=100,
                     launch_point_step_factor=0.1, max_count=50,
                     params_guess=[0, 0, 0.01]):
@@ -136,7 +136,7 @@ def find_field_null(grid, bx_interpolator, by_interpolator,
     y_min, y_max = grid[1].min(), grid[1].max()
     magnitude = np.sqrt(b_fields[0][:, :]**2 + b_fields[1][:, :]**2)
     filtered_magnitude = ndimage.gaussian_filter(magnitude, filter_size)
-    max_index = np.unravel_index(filtered_magnitude.argmax(),
+    max_index = np.unravel_index( np.nanargmax(filtered_magnitude),
                                  filtered_magnitude.shape)
     center_points = []
     radii = []
