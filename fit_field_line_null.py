@@ -207,7 +207,7 @@ def parse_args():
                         default='../output/boxed_unstructured_measurements/')
     parser.add_argument('--input_date',
                         help='time stamp of input files',
-                        default='2017-04-11-21-07')
+                        default='2017-04-12-09-52')
     parser.add_argument('--input_file_text',
                         help='input file name',
                         default='_boxed_unstructured_')
@@ -224,7 +224,7 @@ def parse_args():
     parser.add_argument('--bxby_extent_0',
                         help='overlapping spatial extent of bx by',
                         nargs=6, type=float,
-                        default=[-0.027, 0.025, -0.057, 0.037, 0.249, 0.416])
+                        default=[-0.027, 0.025, -0.057, 0.040, 0.249, 0.416])
     parser.add_argument('--bxby_extent_1',
                         help='overlapping spatial extent of bx by',
                         nargs=6, type=float,
