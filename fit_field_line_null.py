@@ -54,8 +54,8 @@ def main(args):
                                                      in_file + time_str + '.vtk')
         by_points, by_values = read_unstructured_vtk(in_dir + 'by' +
                                                      in_file + time_str + '.vtk')
-        bz_points, bz_values = read_unstructured_vtk(in_dir + 'bz' +
-                                                     in_file + time_str + '.vtk')
+        #bz_points, bz_values = read_unstructured_vtk(in_dir + 'bz' +
+        #                                             in_file + time_str + '.vtk')
         z_value = np.unique(bx_points[:, 2])[args.plane_number]
 
         z_index = np.where(bx_points[:, 2] == z_value)[0]
@@ -64,13 +64,13 @@ def main(args):
         z_index = np.where(by_points[:, 2] == z_value)[0]
         by_points = by_points[z_index, :-1]
         by_values = by_values[z_index]
-        z_index = np.where(bz_points[:, 2] == z_value)[0]
-        bz_points = bz_points[z_index, :-1]
-        bz_values = bz_values[z_index]
+        #z_index = np.where(bz_points[:, 2] == z_value)[0]
+        #bz_points = bz_points[z_index, :-1]
+        #bz_values = bz_values[z_index]
 
         bx_interpolator = struc_3d.get_interpolator(bx_points, bx_values)
         by_interpolator = struc_3d.get_interpolator(by_points, by_values)
-        bz_interpolator = struc_3d.get_interpolator(bz_points, bz_values)
+        #bz_interpolator = struc_3d.get_interpolator(bz_points, bz_values)
         grid_extent = [bxby_extent[0], bxby_extent[1],
                        -0.02, bxby_extent[3]]
         grid = np.meshgrid(np.linspace(grid_extent[0], grid_extent[1],
@@ -207,7 +207,7 @@ def parse_args():
                         default='../output/boxed_unstructured_measurements/')
     parser.add_argument('--input_date',
                         help='time stamp of input files',
-                        default='2017-04-12-09-52')
+                        default='2017-04-11-21-07')
     parser.add_argument('--input_file_text',
                         help='input file name',
                         default='_boxed_unstructured_')
