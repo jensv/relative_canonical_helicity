@@ -159,9 +159,12 @@ def find_field_null(grid, bx_interpolator, by_interpolator,
         min_index = np.argmin([size0, size1])
         min_size = [size0, size1][min_index]
         streamline = streamline[np.invert(np.isnan(streamline[:, min_index]))].reshape(min_size, 2)
-        circle_params, success = leastsq(to_min, params_guess,
-                                         args=np.asarray([streamline[:, 0],
-                                                          streamline[:, 1]]))
+        try:
+            circle_params, success = leastsq(to_min, params_guess,
+                                             args=np.asarray([streamline[:, 0],
+                                                              streamline[:, 1]]))
+        except:
+            break
         direction = [circle_params[0] - launch_point[0], circle_params[1] - launch_point[1]]
         distance = np.sqrt(direction[0]**2. + direction[1]**2.)
         center_point = (circle_params[0], circle_params[1])
