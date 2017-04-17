@@ -310,7 +310,6 @@ def parse_args():
                         help='truncate Gaussian filter at this multiple of sigma',
                         type=float,
                         default=3)
-    i
     args = parser.parse_args()
     return args
 
