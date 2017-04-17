@@ -86,7 +86,7 @@ def main(args):
         single_plane = np.unique(bx_all_planes['z_out'])[0]
         bx_filtered = filter_unstructured_data(bxby_grid, bx_all_planes,
                                                single_plane=single_plane,
-                                               filter_sigma=args.filter_sigma
+                                               filter_sigma=args.filter_sigma,
                                                filter_truncate=args.filter_truncate)
 
         by_filtered = filter_unstructured_data(bxby_grid, by_all_planes,
@@ -310,6 +310,7 @@ def parse_args():
                         help='truncate Gaussian filter at this multiple of sigma',
                         type=float,
                         default=3)
+    i
     args = parser.parse_args()
     return args
 
