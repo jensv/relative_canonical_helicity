@@ -4,6 +4,11 @@
 Created on Apr 13 2017
 
 @author: Jens von der Linden
+
+Filter RSX measurements:
+1)interpolate unstructured grid of measurements to rectilinear grid
+2)apply Gaussian filter
+3)Resample to unstructured grid
 """
 import argparse
 import numpy as np
@@ -78,11 +83,16 @@ def main(args):
                                 np.linspace(args.bxby_filter_extent[2],
                                             args.bxby_filter_extent[3],
                                             bxby_grid_y_points))
+        single_plane = np.unique(bx_all_planes['z_out'])[0]
         bx_filtered = filter_unstructured_data(bxby_grid, bx_all_planes,
-                                               single_plane=np.unique(bx_all_planes['z_out'])[0], filter_sigma=args.filter_sigma)
+                                               single_plane=single_plane,
+                                               filter_sigma=args.filter_sigma
+                                               filter_truncate=args.filter_truncate)
 
         by_filtered = filter_unstructured_data(bxby_grid, by_all_planes,
-                                               single_plane=np.unique(by_all_planes['z_out'])[0], filter_sigma=args.filter_sigma)
+                                               single_plane=single_plane,
+                                               filter_sigma=args.filter_sigma,
+                                               filter_truncate=args.filter_truncate)
 
     ug.save_to_unstructured_grid(bx_filtered, 'bx', out_dir,
                                  prefix=args.output_prefix)
@@ -101,7 +111,7 @@ def main(args):
 
 
 def filter_unstructured_data(grid, measurements, filter_sigma=None,
-                             single_plane=None):
+                             single_plane=None, filter_truncate=None):
     r"""
     Filter data on unstructured grid.
 
@@ -118,7 +128,8 @@ def filter_unstructured_data(grid, measurements, filter_sigma=None,
         filtered_by_time_point = interpolate_and_filter_data(points_by_plane[i],
                                                              values_by_plane[i],
                                                              grid, delays,
-                                                             filter_sigma=filter_sigma)
+                                                             filter_sigma=filter_sigma,
+                                                             filter_truncate=filter_truncate)
         (points,
          values_by_time_point) = resample_to_unstructured_grid(grid,
                                                                filtered_by_time_point,
@@ -149,7 +160,8 @@ def extract_planes(measurements):
     return planes, points_by_plane, values_by_plane
 
 
-def interpolate_and_filter_data(points, values, grid, delays, filter_sigma=None):
+def interpolate_and_filter_data(points, values, grid, delays, filter_sigma=None,
+                                filter_truncate=None):
     r"""
     Interpolate and filter (with Gaussian)
     """
@@ -165,7 +177,11 @@ def interpolate_and_filter_data(points, values, grid, delays, filter_sigma=None)
         #print 'nan y', np.unique(grid[1][np.isnan(data)])
         #assert np.sum(np.isnan(data)) == 0, 'interpolated data contains nans'
         if filter_sigma:
-            filtered = ndimage.gaussian_filter(data, filter_sigma)
+            if filter_truncate:
+                filtered = ndimage.gaussian_filter(data, filter_sigma,
+                                                   truncate=filter_truncate)
+            else:
+                filtered = ndimage.gaussian_filter(data, filter_sigma)
         else:
             filtered = data
         filtered_by_time_point.append(filtered)
@@ -288,6 +304,10 @@ def parse_args():
                         default=0.0005, type=float)
     parser.add_argument('--filter_sigma',
                         help='standard deviation of gaussian filter',
+                        type=float,
+                        default=3)
+    parser.add_argument('--filter_sigma_truncation',
+                        help='truncate Gaussian filter at this multiple of sigma',
                         type=float,
                         default=3)
     args = parser.parse_args()
