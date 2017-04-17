@@ -306,7 +306,7 @@ def parse_args():
                         help='standard deviation of gaussian filter',
                         type=float,
                         default=3)
-    parser.add_argument('--filter_sigma_truncation',
+    parser.add_argument('--filter_truncate',
                         help='truncate Gaussian filter at this multiple of sigma',
                         type=float,
                         default=3)
