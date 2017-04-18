@@ -165,7 +165,6 @@ def interpolate_and_filter_data(points, values, grid, delays, filter_sigma=None,
     r"""
     Interpolate and filter (with Gaussian)
     """
-    print 'grid in interpolate', grid
     filtered_by_time_point = []
     for time_point in xrange(delays.size):
         print 'filter', time_point
