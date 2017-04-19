@@ -73,16 +73,8 @@ def main(args):
     te_three_planes = pm.remove_plane(0.302, te_all_planes)
 
     if args.bxby_only:
-        bxby_grid_x_points = int((args.bxby_filter_extent[1] - args.bxby_filter_extent[0])/
-                                  args.filter_spatial_increment)
-        bxby_grid_y_points = int((args.bxby_filter_extent[3] - args.bxby_filter_extent[2])/
-                                  args.filter_spatial_increment)
-        bxby_grid = np.meshgrid(np.linspace(args.bxby_filter_extent[0],
-                                            args.bxby_filter_extent[1],
-                                            bxby_grid_x_points),
-                                np.linspace(args.bxby_filter_extent[2],
-                                            args.bxby_filter_extent[3],
-                                            bxby_grid_y_points))
+        bxby_grid = make_grid_from_extent(args.bxby_filter_extent,
+                                          args.filter_spatial_increment)
         single_plane = np.unique(bx_all_planes['z_out'])[0]
         bx_filtered = filter_unstructured_data(bxby_grid, bx_all_planes,
                                                single_plane=single_plane,
@@ -93,21 +85,80 @@ def main(args):
                                                single_plane=single_plane,
                                                filter_sigma=args.filter_sigma,
                                                filter_truncate=args.filter_truncate)
+    else:
+        bx_grid = make_grid_from_extent(args.bx_filter_extent,
+                                        args.filter_spatial_increment)
+        bx_filtered = filter_unstructured_data(bx_grid, bx_all_planes,
+                                               filter_sigma=args.filter_sigma,
+                                               filter_truncate=args.filter_truncate)
+        by_grid = make_grid_from_extent(args.by_filter_extent,
+                                        args.filter_spatial_increment)
+        by_filtered = filter_unstructured_data(by_grid, by_all_planes,
+                                               filter_sigma=args.filter_sigma,
+                                               filter_truncate=args.filter_truncate)
+        bz_grid = make_grid_from_extent(args.bz_filter_extent,
+                                        args.filter_spatial_increment)
+        bz_filtered = filter_unstructured_data(bz_grid, bz_all_planes,
+                                               filter_sigma=args.filter_sigma,
+                                               filter_truncate=args.filter_truncate)
+        n_grid = make_grid_from_extent(args.n_filter_extent,
+                                       args.filter_spatial_increment)
+        n_filtered = filter_unstructured_data(n_grid, n_all_planes,
+                                              filter_sigma=args.filter_sigma,
+                                              filter_truncate=args.filter_truncate)
+        te_grid = make_grid_from_extent(args.te_filter_extent,
+                                        args.filter_spatial_increment)
+        te_filtered = filter_unstructured_data(te_grid, te_all_planes,
+                                               filter_sigma=args.filter_sigma,
+                                               filter_truncate=args.filter_truncate)
+
+        mach_y_grid = make_grid_from_extent(args.mach_y_extent,
+                                          args.filter_spatial_increment)
+        mach_y_filtered = filter_unstructured_data(mach_y_grid, mach_y_plane,
+                                                   filter_sigma=args.filter_sigma,
+                                                   filter_truncate=args.filter_truncate)
+
+        mach_z_grid =  make_grid_from_extent(args.mach_z_extent,
+                                             args.filter_spatial_increment)
+        mach_z_filtered = filter_unstructured_data(mach_z_grid, mach_z_plane,
+                                                   filter_sigma=args.filter_sigma,
+                                                   filter_truncate=args.filter_truncate)
+
 
     ug.save_to_unstructured_grid(bx_filtered, 'bx', out_dir,
                                  prefix=args.output_prefix)
     ug.save_to_unstructured_grid(by_filtered, 'by', out_dir,
                                  prefix=args.output_prefix)
-    #ug.save_to_unstructured_grid(bz_all_planes, 'bz', out_dir,
-    #                             prefix=args.output_prefix)
-    #ug.save_to_unstructured_grid(te_three_planes, 'te', out_dir,
-    #                             prefix=args.output_prefix)
-    #ug.save_to_unstructured_grid(n_three_planes, 'n', out_dir,
-    #                             prefix=args.output_prefix)
-    #ug.save_to_unstructured_grid(mach_y_plane, 'mach_y', out_dir,
-    #                             prefix=args.output_prefix)
-    #ug.save_to_unstructured_grid(mach_z_plane, 'mach_z', out_dir,
-    #                             prefix=args.output_prefix)
+    if not args.bxby_only:
+        ug.save_to_unstructured_grid(bz_filtered, 'bz', out_dir,
+                                     prefix=args.output_prefix)
+        ug.save_to_unstructured_grid(te_filtered, 'te', out_dir,
+                                     prefix=args.output_prefix)
+        ug.save_to_unstructured_grid(n_filtered, 'n', out_dir,
+                                     prefix=args.output_prefix)
+        ug.save_to_unstructured_grid(mach_y_filtered, 'mach_y', out_dir,
+                                     prefix=args.output_prefix)
+        ug.save_to_unstructured_grid(mach_z_filtered, 'mach_z', out_dir,
+                                     prefix=args.output_prefix)
+
+
+def make_grid_from_extent(extent, increment):
+    r"""
+    Make rectilinear grid from extent list.
+    """
+    grid_x_points = int((extent[1] - extent[0])/increment)
+    grid_y_points = int((extent[3] - extent[2])/increment)
+    grid_z_points = int((extent[5] - extent[4])/increment)
+    grid = np.meshgrid(np.linspace(extent[0],
+                                   extent[1],
+                                   grid_x_points),
+                       np.linspace(extent[2],
+                                   extent[3],
+                                   grid_y_points),
+                       np.linspace(extent[4],
+                                   extent[5],
+                                   grid_z_points))
+    return grid
 
 
 def filter_unstructured_data(grid, measurements, filter_sigma=None,
@@ -234,9 +285,14 @@ def parse_args():
                         help="spatial extent of interpolated grid"
                              "on which to filter Bx measurements",
                         nargs=4, type=float,
-                        default=[-0.026, 0.025, -0.019, 0.029])
+                        default=[-0.026, 0.025, -0.019, 0.029, 0.249, 0.416])
     parser.add_argument('--by_extent',
                         help='spatial extent of By measurements',
+                        nargs=6, type=float,
+                        default=[-0.032, 0.028, -0.022, 0.032, 0.249, 0.416])
+    parser.add_argument('--by_filter_extent',
+                        help="spatial extent of interpolated grid"
+                             "on which to filter Bx measurements",
                         nargs=6, type=float,
                         default=[-0.032, 0.028, -0.022, 0.032, 0.249, 0.416])
     parser.add_argument('--bxby_only',
@@ -256,8 +312,18 @@ def parse_args():
                         help='spatial extent of Bz measurements',
                         nargs=6, type=float,
                         default=[-0.032, 0.028, -0.022, 0.032, 0.249, 0.416])
+    parser.add_argument('--bz_filter_extent',
+                        help="spatial extent of interpolated grid"
+                             "on which to filter Bz measurements",
+                        nargs=6, type=float,
+                        default=[-0.032, 0.028, -0.022, 0.032, 0.249, 0.416])
     parser.add_argument('--te_extent',
                         help='spatial extent of temperature measurements',
+                        nargs=6, type=float,
+                        default=[-0.026, 0.028, -0.03, 0.028, 0.249, 0.416])
+    parser.add_argument('--te_filter_extent',
+                        help="spatial extent of interpolated grid"
+                             "on which to filter Te measurements",
                         nargs=6, type=float,
                         default=[-0.026, 0.028, -0.03, 0.028, 0.249, 0.416])
     parser.add_argument('--te_bounds',
@@ -266,6 +332,11 @@ def parse_args():
                         default=[1e-3, 1e3])
     parser.add_argument('--n_extent',
                         help='spatial extent of density measurements',
+                        nargs=6, type=float,
+                        default=[-0.026, 0.028, -0.03, 0.028, 0.249, 0.416])
+    parser.add_argument('--n_filter_extent',
+                        help="spatial extent of interpolated grid"
+                             "on which to filter n measurements",
                         nargs=6, type=float,
                         default=[-0.026, 0.028, -0.03, 0.028, 0.249, 0.416])
     parser.add_argument('--n_bounds',
@@ -288,8 +359,18 @@ def parse_args():
                         help='spatial extent of mach measurements to include',
                         nargs=6, type=float,
                         default=[-0.052, 0.052, -0.022, 0.032, 0.249, 0.416])
+    parser.add_argument('--mach_y_filter_extent',
+                        help="spatial extent of interpolated grid"
+                             "on which to filter mach_y measurements",
+                        nargs=6, type=float,
+                        default=[-0.052, 0.052, -0.022, 0.032, 0.249, 0.416])
     parser.add_argument('--mach_z_extent',
                         help='spatial extent of mach measurements to include',
+                        nargs=6, type=float,
+                        default=[-0.032, 0.032, -0.022, 0.032, 0.249, 0.416])
+    parser.add_argument('--mach_z_filter_extent',
+                        help="spatial extent of interpolated grid"
+                             "on which to filter Bz measurements",
                         nargs=6, type=float,
                         default=[-0.032, 0.032, -0.022, 0.032, 0.249, 0.416])
     parser.add_argument('--mach_bounds',
@@ -300,7 +381,11 @@ def parse_args():
                         default='_filtered_unstructured_')
     parser.add_argument('--filter_spatial_increment',
                         help='spatial increment of interpolated grid for filtering',
-                        default=0.0005, type=float)
+                        default=0.001, type=float)
+    parser.add_argument('--no_filter',
+                        help="run with no filter should return same"
+                        "unstructured grid as write_measurements_to_unstructured_grid",
+                        default=False, action='store_true')
     parser.add_argument('--filter_sigma',
                         help='standard deviation of gaussian filter',
                         type=float,
