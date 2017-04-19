@@ -70,6 +70,10 @@ def main(args):
         for field in fields_to_read:
             read = rrv.read_scalar(input_file, field)
             fields[field] = read[1][ylow:yhigh, xlow:xhigh, zlow:zhigh]
+            if args.filter_gaussian:
+                fields[field] = filter_data(fields[field],
+                                            filter_sigma=args.filter_sigma,
+                                            filter_truncate=args.filter_truncate)
 
         mesh = read[0]
         mesh[0] = mesh[0][ylow:yhigh, xlow:xhigh, zlow:zhigh]
@@ -298,6 +302,23 @@ def main(args):
                                                   x, y, z, variables,
                                                   time_point)
 
+
+def filter_data(data, filter_sigma=None,
+                filter_truncate=None):
+    r"""
+    Filter (with Gaussian).
+    """
+    if filter_sigma:
+        if filter_truncate:
+            filtered = ndimage.gaussian_filter(data, filter_sigma,
+                                               truncate=filter_truncate)
+        else:
+            filtered = ndimage.gaussian_filter(data, filter_sigma)
+    else:
+        filtered = data
+    return filtered
+
+
 def parse_args():
     r"""
     """
@@ -344,6 +365,18 @@ def parse_args():
                         help='only calculate magnetic quantities',
                         action='store_true',
                         default=False)
+    parser.add_argument('--filter_gaussian',
+                        help="run with averaging on all measured quantities,"
+                        "used to average measurements for uncertainty analysis",
+                        default=False, action='store_true')
+    parser.add_argument('--filter_sigma',
+                        help='standard deviation of gaussian filter',
+                        type=float,
+                        default=3)
+    parser.add_argument('--filter_truncate',
+                        help='truncate Gaussian filter at this multiple of sigma',
+                        type=float,
+                        default=3)
     args = parser.parse_args()
     return args
 
