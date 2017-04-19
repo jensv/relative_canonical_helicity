@@ -12,6 +12,7 @@ from scipy.constants import elementary_charge as q_e
 from scipy.constants import proton_mass as m_i
 from astropy.convolution import convolve, convolve_fft
 from scipy.ndimage import gaussian_filter
+from scipy import ndimage
 from scipy.signal import fftconvolve
 import scipy
 from datetime import date
