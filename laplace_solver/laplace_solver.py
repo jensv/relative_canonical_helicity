@@ -32,12 +32,12 @@ def construct_right_side(shape, deltas, boundary_values):
     the Laplace problem.
     """
     right_side = np.zeros(shape)
-    right_side[:, 0, :] = 2.*deltas[0]*boundary_values[:, 0, :]
-    right_side[0, :, :] = 2.*deltas[1]*boundary_values[0, :, :]
-    right_side[:, :, 0] = 2.*deltas[2]*boundary_values[:, :, 0]
-    right_side[:, -1, :] = -2.*deltas[0]*boundary_values[:, -1, :]
-    right_side[-1, :, :] = -2.*deltas[1]*boundary_values[-1, :, :]
-    right_side[:, :, -1] = -2.*deltas[2]*boundary_values[:, :, -1]
+    right_side[:, 0, :] = 2.*boundary_values[:, 0, :]
+    right_side[0, :, :] = 2.*boundary_values[0, :, :]
+    right_side[:, :, 0] = 2.*boundary_values[:, :, 0]
+    right_side[:, -1, :] = -2.*boundary_values[:, -1, :]
+    right_side[-1, :, :] = -2.*boundary_values[-1, :, :]
+    right_side[:, :, -1] = -2.*boundary_values[:, :, -1]
     return right_side
 
 
