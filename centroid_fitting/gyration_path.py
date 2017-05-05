@@ -24,14 +24,15 @@ def gyration_path(axes=None, circles=None, step=25,
                   field_null_path="/home/jensv/rsx/jens_analysis/output/field_nulls/",
                   field_null_file="2017-04-13-23-41/field_nulls.txt",
                   measurement_limits=(-0.022, 0.024, -0.017, 0.018),
-                  bxby_limits = (-0.024, 0.025, -0.073, 0.038),
+                  bxby_limits = (-0.032, 0.025, -0.072, 0.040),
                   errorevery=10, params_guess=[0, 0, 0.01],
                   circle_fit=False, xlim=(-0.03, 0.05),
-                  xticks=None):
+                  xticks=None, shift_time=125):
 
+    size=5
     centroid_file = field_null_path + field_null_file
     if not points is None:
-        field_nulls = points
+        field_nulls = np.roll(points, shift_time, axis=0)
     else:
         field_nulls = np.loadtxt(centroid_file)
 
@@ -53,8 +54,10 @@ def gyration_path(axes=None, circles=None, step=25,
     axes.add_patch(bx_by_measurement_box)
 
     colormap = np.linspace(0, 1, 250-start)
-    axes.scatter(field_nulls[start:, 0], field_nulls[start:, 1], c=colormap, zorder=100)
+    axes.scatter(field_nulls[start:, 0], field_nulls[start:, 1],
+                 c=colormap, zorder=100, s=size)
     if not errors is None:
+        errors = np.roll(errors, shift_time, axis=0)
         axes.errorbar(field_nulls[start:, 0], field_nulls[start:, 1],
                       xerr=errors[start:, 0], yerr=errors[start:, 1],
                       ecolor='grey',
@@ -70,7 +73,7 @@ def gyration_path(axes=None, circles=None, step=25,
             colormap = np.linspace(1, 0, np.round(250./step))
             circle = patches.Circle(field_null, radius=0.02, facecolor='none',
                                     edgecolor=str(colormap[i]), alpha=0.5)
-            axes.scatter(field_null[0], field_null[1], c='red')
+            axes.scatter(field_null[0], field_null[1], c='red', s=size)
             axes.add_patch(circle)
 
     if circle_fit:
@@ -79,7 +82,12 @@ def gyration_path(axes=None, circles=None, step=25,
                                                           field_nulls[:, 1]]))
         circle = patches.Circle((circle_params[0],  circle_params[1]),
                                 radius=circle_params[2], facecolor='none',
-                                edgecolor='black', lw=5)
+                                edgecolor='red', lw=5, ls='--', alpha=0.5)
+        print circle_params[0], circle_params[1], circle_params[2]
+        print leastsq(to_min, params_guess,
+                      args=np.asarray([field_nulls[:, 0],
+                      field_nulls[:, 1]]))
+
         axes.add_patch(circle)
 
 
