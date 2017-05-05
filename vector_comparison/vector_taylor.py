@@ -6,7 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 sys.path.append('../../vector_calculus')
-import vector_calculus as vc
+from vector_calculus import vector_calculus as vc
+from matplotlib.ticker import MultipleLocator, MaxNLocator
 
 class TaylorDiagram(object):
     """Taylor diagram: plot model standard deviation and correlation
@@ -30,7 +31,9 @@ class TaylorDiagram(object):
     """
 
     def __init__(self, refstd, fig=None, rect=111, label='_',
-                 std_multiplier=1.5):
+                 std_multiplier=1.5, axes=None,
+                 multiple_locator=None, r_locations=None, r_label_pos=(.3, 0.02),
+                 noref=False):
         """Set up Taylor diagram axes, i.e. single quadrant polar
         plot, using mpl_toolkits.axisartist.floating_axes. refstd is
         the reference standard deviation to be compared to.
@@ -45,7 +48,8 @@ class TaylorDiagram(object):
         tr = PolarAxes.PolarTransform()
 
         # Correlation labels
-        rlocs = np.concatenate(([-0.99, -0.95], np.arange(-9, 10)/10.,[0.95,0.99]))
+        rlocs = np.concatenate(([-0.99, -0.95, -0.9],
+                                np.arange(-8, 9, 2)/10.,[0.9, 0.95, 0.99]))
         tlocs = np.arccos(rlocs)        # Conversion to polar angles
         gl1 = gf.FixedLocator(tlocs)    # Positions
         tf1 = gf.DictFormatter(dict(zip(tlocs, map(str,rlocs))))
@@ -54,17 +58,34 @@ class TaylorDiagram(object):
         self.smin = 0.
         self.smax = std_multiplier*self.refstd
 
-        ghelper = fa.GridHelperCurveLinear(tr,
-                                           extremes=(0,np.pi,
-                                                     self.smin,self.smax),
-                                           grid_locator1=gl1,
-                                           tick_formatter1=tf1)
+        if r_locations is None:
+            ghelper = fa.GridHelperCurveLinear(tr,
+                                               extremes=(0, np.pi,
+                                                         self.smin,self.smax),
+                                               grid_locator1=gl1,
+                                               tick_formatter1=tf1)
+        else:
+            r_grid_locator = gf.FixedLocator(r_locations)
+            r_grid_labels = gf.DictFormatter(dict(zip(r_locations,
+                                                      map(str, r_locations))))
+            ghelper = fa.GridHelperCurveLinear(tr,
+                                               extremes=(0, np.pi,
+                                                         self.smin,self.smax),
+                                               grid_locator1=gl1,
+                                               tick_formatter1=tf1,
+                                               grid_locator2=r_grid_locator,
+                                               tick_formatter2=r_grid_labels)
 
-        if fig is None:
-            fig = plt.figure()
+        if (axes is None):
+            if fig is None:
+                fig = plt.figure()
 
-        ax = fa.FloatingSubplot(fig, rect, grid_helper=ghelper)
-        fig.add_subplot(ax)
+            ax = fa.FloatingSubplot(fig, rect, grid_helper=ghelper)
+            fig.add_subplot(ax)
+        else:
+            ax = fa.FloatingSubplot(fig, rect, grid_helper=ghelper)
+            axes = ax
+
 
         # Adjust axes
         ax.axis["top"].set_axis_direction("bottom")  # "Angle axis"
@@ -83,6 +104,10 @@ class TaylorDiagram(object):
 
         ax.axis["bottom"].set_visible(False) # Useless
 
+        if multiple_locator:
+            majorLocator  = MultipleLocator(multiple_locator)
+            ax.axis["left"].set_major_locator(majorLocator)
+
         # Contours along standard deviations
         ax.grid(True, which='major', linestyle='-', alpha=0.3, color='grey')
         # Use this to edit gridlines:
@@ -94,17 +119,18 @@ class TaylorDiagram(object):
         self.ax = ax.get_aux_axes(tr)   # Polar coordinates
 
         # Add reference point and stddev contour
-        print "Reference std:", self.refstd
-        l, = self.ax.plot([0], self.refstd, 'k*',
-                          ls='', ms=10, label=label)
-        t = np.linspace(0, np.pi)
-        r = np.zeros_like(t) + self.refstd
-        self.ax.plot(t,r, 'k--', label='_')
+        if not noref:
+            l, = self.ax.plot([0], self.refstd, 'k*',
+                              ls='', ms=10, label=label)
+            t = np.linspace(0, np.pi)
+            r = np.zeros_like(t) + self.refstd
+            self.ax.plot(t,r, 'k--', label='_')
+            self.samplePoints = [l]
+        else:
+            self.samplePoints = []
 
-        plt.figtext(.35, .15, 'Root mean square vector length')
-
-        # Collect sample points for latter use (e.g. legend)
-        self.samplePoints = [l]
+        plt.figtext(r_label_pos[0], r_label_pos[1],
+                    'Root mean square vector length')
 
     def add_sample(self, stddev, corrcoef, *args, **kwargs):
         """Add sample (stddev,corrcoeff) to the Taylor diagram. args
@@ -165,18 +191,31 @@ def root_mean_square_vector_difference(ref_field, field):
 
 def calc_and_plot(ref_field, fields, fig=None,
                   std_multiplier=1.5, labels=None,
-                  colors=None, markers=None):
+                  colors=None, markers=None, axes=None,
+                  bbox_to_anchor=[0.1, 1.2], multiple_locator=None,
+                  r_locations=None, r_label_pos=(0.3, 0.02),
+                  norm_rmsl=False, noref=False):
     r"""
     """
     ref_rmsl = root_mean_square_lenth(ref_field)
-    diagram = TaylorDiagram(ref_rmsl, fig=fig,
-                            std_multiplier=std_multiplier)
+    if norm_rmsl:
+        diagram = TaylorDiagram(1., fig=fig,
+                                std_multiplier=std_multiplier, axes=axes,
+                                multiple_locator=multiple_locator,
+                                r_locations=r_locations, r_label_pos=r_label_pos,
+                                noref=noref)
+    else:
+        diagram = TaylorDiagram(ref_rmsl, fig=fig,
+                                std_multiplier=std_multiplier, axes=axes,
+                                multiple_locator=multiple_locator,
+                                r_locations=r_locations, r_label_pos=r_label_pos,
+                                noref=noref)
+
     for i, field in enumerate(fields):
-        print field.shape
-        print ref_field.shape
         similarity = vector_simililarity_coefficient(ref_field, field)
         rmsl = root_mean_square_lenth(field)
-        print similarity, rmsl
+        if norm_rmsl:
+            rmsl = rmsl/ref_rmsl
         rmsvds = root_mean_square_vector_difference(ref_field, field)
         if not colors:
             colors = ['red',] * len(fields)
@@ -184,11 +223,12 @@ def calc_and_plot(ref_field, fields, fig=None,
             markers = ['s',] * len(fields)
         if labels:
             diagram.add_sample(rmsl, similarity, marker=markers[i],
-                               ls='', c=colors[i], label=labels[i],
-                               alpha=0.3)
+                               ls='', c=colors[i], label=labels[i])
         else:
             diagram.add_sample(rmsl, similarity, marker=markers[i],
                                ls='', c=colors[i])
-    diagram.ax.legend(loc='best')
+    diagram.ax.legend(bbox_to_anchor=bbox_to_anchor,
+                      loc='upper center',
+                      borderaxespad=0.25)
     #diagram.add_contours(levels=10)
     return diagram

@@ -2,8 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
-sys.path.append('../../vector_calculus')
-import vector_calculus as vc
+from vector_calculus import vector_calculus as vc
 
 
 def calc_and_plot_dists(field1, field2,
