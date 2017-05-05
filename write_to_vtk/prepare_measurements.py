@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.io.idl as idl
+import sys
+#sys.path.append('..')
 from mach_probe_analysis import ion_current_to_mach_number as ic_to_mach
 from read_from_sql import read_from_sql
 
