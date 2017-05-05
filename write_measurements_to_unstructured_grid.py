@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument('--te_extent',
                         help='spatial extent of temperature measurements',
                         nargs=6, type=float,
-                        default=[-0.026, 0.028, -0.03, 0.028, 0.249, 0.416])
+                        default=[-0.026, 0.028, -0.03, 0.029, 0.249, 0.416])
     parser.add_argument('--te_bounds',
                         help='sensible bounds for temperature measurements',
                         nargs=2, type=float,
@@ -98,7 +98,7 @@ def parse_args():
     parser.add_argument('--n_extent',
                         help='spatial extent of density measurements',
                         nargs=6, type=float,
-                        default=[-0.026, 0.028, -0.03, 0.028, 0.249, 0.416])
+                        default=[-0.026, 0.028, -0.03, 0.029, 0.249, 0.416])
     parser.add_argument('--n_bounds',
                         help='sensible bounds for density measurements',
                         nargs=2, type=float,
