@@ -184,7 +184,7 @@ def parse_args():
     parser.add_argument('--joint_extent',
                         help='overlapping spatial extent of all parameters',
                         nargs=6, type=float,
-                        default=[-0.022, 0.024, -0.02, 0.018, 0.249, 0.416])
+                        default=[-0.022, 0.024, -0.02, 0.029, 0.249, 0.416])
     parser.add_argument('--output_prefix',
                         help='prefix of output files',
                         default='data_interp_to_rect_grid')
@@ -198,6 +198,9 @@ def parse_args():
     parser.add_argument('--just_magnetic',
                         help='only interpolate bdot measurements',
                         action='store_true', default=False)
+    #parser.add_argument('--just_one_time_step',
+    #                    help='only interpolate first time step',
+    #                    action='store_true', default=False)
     args = parser.parse_args()
     return args
 
