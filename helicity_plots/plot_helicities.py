@@ -24,7 +24,7 @@ def compare_helicities(helicities,
                        filter_width_cross=None, filter_width_kinetic=None,
                        add_cross_magnetic=False, add_three=False,
                        ylim=None, labels_case='default', axes=None,
-                       scale='linear', patch_ends=True, shift_time=125):
+                       scale='linear', patch_ends=True, shift_time=0):
 
     assert (scale == 'linear' or scale == 'log' or
             scale == 'symlog'), "scale must be one of linear, log or symlog"
@@ -56,7 +56,7 @@ def compare_helicities(helicities,
     B_0 = 0.02
     u_0_a = 1.4e5
     u_0_cs = 20e3
-    n_0 = 1e18
+    n_0 = 1e19
 
 
     if S_0_velocity == 'u_alfven':
@@ -147,7 +147,7 @@ def compare_helicities(helicities,
                  c='red', ls='-', label=labels['relative_magnetic'])
     axes.set_xlabel(r'$t$ [$\mu s$]')
     axes.set_yscale(scale)
-    axes.set_ylabel(r'$K$ [$J$ $kg$ $m^2$]')
+    axes.set_ylabel(r'$K$ [$J$ $kg$ $m^{-4}}$]')
     if normalize:
         axes.set_ylabel(r'$K$ [-]')
 
@@ -182,7 +182,7 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
                                 filter_width_cross=None, filter_width_kinetic=None,
                                 add_cross_magnetic=False, add_three=False,
                                 ylim=None, labels_case='default', axes=None,
-                                scale='linear', patch_ends=True, shift_time=125):
+                                scale='linear', patch_ends=True, shift_time=0):
     r"""
     """
     assert (scale == 'linear' or scale == 'log' or
@@ -215,7 +215,7 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
     B_0 = 0.02
     u_0_a = 1.4e5
     u_0_cs = 20e3
-    n_0 = 1e18
+    n_0 = 1e19
 
 
     if S_0_velocity == 'u_alfven':
@@ -335,8 +335,8 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
                           facecolor='#ff474c')
     axes.set_xlabel(r'$t$ [$\mu s$]')
     axes.set_yscale(scale)
-    axes.set_ylabel(r'$K$ [$J$ $kg$ $m^2$]')
-    if normalize:
+    axes.set_ylabel(r'$K$ [$J$ $kg$ $m^{-4}}$]')
+    if nondim:
         axes.set_ylabel(r'$K$ [-]')
 
     if ylim:
@@ -350,7 +350,7 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
                                  magnetic_final**2*magnetic_std_final**2)
         total_helicity = kinetic_final + cross_final + magnetic_final
         axes.plot(time, kinetic_final + cross_final + magnetic_final,
-                  c='black', ls='-', label=labels['relative_magnetic'] + " $+$ " + labels['relative_cross'] + " $+$ " + labels['relative_kinetic'])
+                  c='black', ls='-', label=labels['relative_magnetic'] + " $+$ " + labels['relative_cross'] + " $+$ " + labels['relative_kinetic'], alpha=0.8)
         axes.fill_between(time,
                           (total_helicity - std_propagated),
                           (total_helicity + std_propagated),
