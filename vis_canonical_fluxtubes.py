@@ -6,8 +6,7 @@ Created on Fri Aug 19 14:38:10 2016
 @author: Jens von der Linden
 """
 
-from datetime import date
-from datetime import datetime
+from datetime import datetime as date
 import numpy as np
 import os
 from scipy.constants import elementary_charge, proton_mass
@@ -28,6 +27,7 @@ dim_grey =(105, 105, 105, 255)
 black = (0, 0, 0, 255)
 dark_grey = (169, 169, 169, 255)
 red = (255, 0, 0, 255)
+dark_red = (84, 0, 0, 255)
 green = (0, 154, 0, 255)
 navy = (0, 0, 128, 255)
 aqua = (0, 255, 255, 255)
@@ -653,7 +653,7 @@ def setup_backward_and_B_stream(visit, name, launch_points,
 
 def setup_field_line(visit, quantity,
                      launch_point=(0.01, 0.01), launch_z=0.249,
-                     color=black):
+                     color=dark_red):
     r"""
     Setup single field line plot to better see twistedness.
     """
@@ -670,7 +670,7 @@ def setup_field_line(visit, quantity,
     return StreamlineAtts_line
 
 
-def setup_annotations(visit, time_scale=1):
+def setup_annotations(visit, time_scale=1, time_offset=0):
     r"""
     Setup Annotations: scale tick font size, label font size,
     hide unecessary text.
@@ -689,7 +689,7 @@ def setup_annotations(visit, time_scale=1):
     AnnotationAtts.userInfoFlag = 0
     AnnotationAtts.databaseInfoFlag = 0
     AnnotationAtts.databaseInfoTimeScale = time_scale
-    AnnotationAtts.databaseInfoTimeOffset = 0
+    AnnotationAtts.databaseInfoTimeOffset = time_offset
     visit.SetAnnotationAttributes(AnnotationAtts)
     return AnnotationAtts
 
@@ -880,6 +880,7 @@ def setup_slider(visit):
     slider = visit.CreateAnnotationObject("TimeSlider")
     slider.SetText("$time us")
     slider.SetRounded(0)
+    slider.SetVisible(1)
 
 
 def main():
@@ -888,7 +889,7 @@ def main():
     args = parse_args()
     database_prefix = args.database_prefix + args.database_date
     visit.Launch()
-    today = datetime.now().strftime('%Y-%m-%d-%H-%M')
+    today = date.now().strftime('%Y-%m-%d-%H-%M')
     out_dir = '../output/canonical_flux_tubes/' + today
     try:
        os.makedirs(out_dir)
@@ -906,8 +907,14 @@ def main():
     print 'data_path', database_prefix + args.database_postfix
     visit.OpenDatabase(database_prefix + args.database_postfix + "*.vtk database")
     define_expressions(visit)
+
     field_nulls = np.loadtxt(args.field_nulls)
-    AnnotationAtts = setup_annotations(visit, time_scale=args.time_scale)
+    field_nulls = np.roll(field_nulls, args.time_shift, axis=0)
+    time_points = np.arange(args.start_time_point, args.end_time_point)
+    #time_points = np.roll(time_points, args.time_shift, axis=0)
+
+    AnnotationAtts = setup_annotations(visit, time_scale=args.time_scale,
+                                       time_offset=0)
 
     plot_count = 0
 
@@ -945,10 +952,12 @@ def main():
          StreamlineAtts_electron_inner) = setup_massless_electron_canonical_flux_tubes(visit,
                                                                                        points_outer,
                                                                                        points_inner)
-        cut_point[1] += 0.0005
-        FieldLineAtts = setup_field_line(visit, 'Omega_e_times_density',
-                                         launch_point=cut_point)
-        plot_count += 3
+        plot_count += 2
+        if not args.ion:
+           cut_point[1] += 0.0005
+           FieldLineAtts = setup_field_line(visit, 'Omega_e_times_density',
+                                            launch_point=cut_point)
+           plot_count += 1
 
     if args.velocity:
         (velocity_stream_1,
@@ -1012,16 +1021,16 @@ def main():
     visit.DrawPlots()
     save_atts = set_save_settings(visit)
     ending = '.png'
-    visit.SetTimeSliderState(args.start_time_point)
+    visit.SetTimeSliderState(time_points[0])
     if args.wait_for_manual_settings:
         visit.OpenGUI()
         comment = raw_input()
 
     visit.ResizeWindow(1, 1920, 1080)
-    for time_point in xrange(args.start_time_point, args.end_time_point):
+    for index, time_point in enumerate(time_points):
         print time_point
         plot_number = 0
-        save_atts.fileName = output_path + str(time_point + args.file_number_offset).zfill(4) + ending
+        save_atts.fileName = output_path + str(index + args.file_number_offset).zfill(4) + ending
         visit.SetSaveWindowAttributes(save_atts)
 
         if args.current_plane:
@@ -1033,7 +1042,7 @@ def main():
 
         (points_outer,
          points_inner,
-         cut_point) = launch_points_inner_outer(field_nulls[time_point],
+         cut_point) = launch_points_inner_outer(field_nulls[index],
                                                 return_cut_point=True)
         if args.stationary_tube:
             (points_outer,
@@ -1064,13 +1073,14 @@ def main():
             visit.SetPlotOptions(StreamlineAtts_electron_inner)
             plot_number +=1
 
-            cut_point[1] += 0.0005
-            visit.SetActivePlots(plot_number)
-            FieldLineAtts.SetPointSource(cut_point[0],
-                                         cut_point[1],
-                                         0.249)
-            visit.SetPlotOptions(FieldLineAtts)
-            plot_number += 1
+            if not args.ion:
+                cut_point[1] += 0.0005
+                visit.SetActivePlots(plot_number)
+                FieldLineAtts.SetPointSource(cut_point[0],
+                                             cut_point[1],
+                                             0.249)
+                visit.SetPlotOptions(FieldLineAtts)
+                plot_number += 1
 
         if args.velocity:
             visit.SetActivePlots(plot_number)
@@ -1102,7 +1112,7 @@ def parse_args():
     parser.add_argument('--start_time_point', help='time point of first output frame', type=int, default=0)
     parser.add_argument('--end_time_point', help='time point of last output frame', type=int, default=250)
     parser.add_argument('--field_nulls', help='path to file listing field_nulls (launching centers)',
-                        default='/home/jensv/rsx/jens_analysis/output/centroid_fitting/2016-08-12/field_nulls.txt')
+                        default='/home/jensv/rsx/jens_analysis/output/field_nulls/2017-05-05/averaged_nulls.txt')
     parser.add_argument('--time_scale', help='time scale of time steps', default=0.068)
     parser.add_argument('--current_plane', help='plot temperature contours',
                         action='store_true', default=False)
@@ -1138,6 +1148,10 @@ def parse_args():
                         nargs=2,
                         type=float,
                         default = [0, 0])
+    parser.add_argument('--time_shift',
+                        help='shift gyration phase',
+                        type=int, default=125)
+
     args = parser.parse_args()
     return args
 
