@@ -330,7 +330,7 @@ def parse_args():
                         default='../output/data_interp_to_rect_grid/')
     parser.add_argument('--input_date',
                         help='time stamp of input files',
-                        default='2017-04-04-13-51')
+                        default='2017-05-10-11-53')
     parser.add_argument('--input_file_text',
                         help='input file name',
                         default='data_interp_to_rect_grid')
@@ -342,7 +342,7 @@ def parse_args():
                                "each side to remove NaNs e.g."
                                "xlow xhigh ylow yhigh zlow zhigh"),
                         nargs=6, type=int,
-                        default=[0, None, 3, None, 0, -1])
+                        default=[2, None, 3, -3, 0, -1])
     parser.add_argument('--filter_width',
                         help='width of boxcar filter for derivatives',
                         type=float, default=5)
