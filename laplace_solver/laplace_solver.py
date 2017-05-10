@@ -3,7 +3,7 @@ import scipy.sparse as sparse
 import scipy.linalg as linalg
 import scipy.fftpack as fft
 
-def laplace_3d_dct_fd(mesh, boundary_values):
+def laplace_3d_dct_fd(mesh, boundary_values, fuka=False):
     r"""
     Discrete Cosine transform method for solving Laplace equation
     with Neumann boundary conditions.
@@ -11,7 +11,7 @@ def laplace_3d_dct_fd(mesh, boundary_values):
     References
     ----------
     (Fuka, 2015) (Hockey book)
-    (Numerical Recepies)
+    (Numerical Recipes)
     """
     d_x = mesh[0][0, 1, 0] - mesh[0][0, 0, 0]
     d_y = mesh[1][1, 0, 0] - mesh[1][0, 0, 0]
@@ -19,8 +19,12 @@ def laplace_3d_dct_fd(mesh, boundary_values):
     deltas = [d_x, d_y, d_z]
     shape = mesh[0].shape
     right_side = construct_right_side(shape, deltas, boundary_values)
+    if fuka:
+        right_side = construct_right_side_fuka(shape, deltas, boundary_values)
     transform_right_side = dct_3d(shape, right_side)
     eigenvalues = construct_eigenvalues(shape)
+    if fuka:
+        eigenvalues = construct_eigenvalues_fuka(shape, deltas)
     transform_solution = transform_right_side/eigenvalues
     solution = idct_3d(shape, transform_solution)
     return solution
@@ -32,12 +36,35 @@ def construct_right_side(shape, deltas, boundary_values):
     the Laplace problem.
     """
     right_side = np.zeros(shape)
-    right_side[:, 0, :] = 2.*boundary_values[:, 0, :]
-    right_side[0, :, :] = 2.*boundary_values[0, :, :]
-    right_side[:, :, 0] = 2.*boundary_values[:, :, 0]
-    right_side[:, -1, :] = -2.*boundary_values[:, -1, :]
-    right_side[-1, :, :] = -2.*boundary_values[-1, :, :]
-    right_side[:, :, -1] = -2.*boundary_values[:, :, -1]
+    right_side[:, 0, :] += 2.*deltas[0]*boundary_values[:, 0, :]
+    right_side[0, :, :] += 2.*deltas[1]*boundary_values[0, :, :]
+    right_side[:, :, 0] += 2.*deltas[2]*boundary_values[:, :, 0]
+    right_side[:, -1, :] += -2.*deltas[0]*boundary_values[:, -1, :]
+    right_side[-1, :, :] += -2.*deltas[1]*boundary_values[-1, :, :]
+    right_side[:, :, -1] += -2.*deltas[2]*boundary_values[:, :, -1]
+
+    right_side[0, 0, 0] /= 3.
+    right_side[-1, 0, 0] /= 3.
+    right_side[0, -1, 0] /= 3.
+    right_side[-1, -1, 0] /= 3.
+    right_side[0, 0, -1] /= 3.
+    right_side[-1, 0, -1] /= 3.
+    right_side[-1, -1, -1] /= 3.
+
+    right_side[1:-1, 0, 0] /= 2.
+    right_side[1:-1, -1, 0] /= 2.
+    right_side[1:-1, 0, -1] /= 2.
+    right_side[1:-1, -1, -1] /= 2.
+
+    right_side[0, 1:-1, 0] /= 2.
+    right_side[-1, 1:-1, 0] /= 2.
+    right_side[0, 1:-1, -1] /= 2.
+    right_side[-1, 1:-1, -1] /= 2.
+
+    right_side[0, 0, 1:-1] /= 2.
+    right_side[-1, 0, 1:-1] /= 2.
+    right_side[0, -1, 1:-1] /= 2.
+    right_side[-1, -1, 1:-1] /= 2.
     return right_side
 
 
@@ -104,5 +131,65 @@ def construct_eigenvalues(shape):
                              (shape[0] - 1.)) +
                       np.cos(np.pi*index_mesh[2] /
                              (shape[2] - 1.)) - 3.)
-    eigenvalues[np.isclose(eigenvalues, 0, atol=1e-12)] = 1.
+    eigenvalues[np.isclose(eigenvalues, 0, atol=1e-12)] = 1e-8
+    return eigenvalues
+
+
+def construct_right_side_fuka(shape, deltas, boundary_values):
+    r"""
+    Return right hand side of the matrix formulation of
+    the Laplace problem.
+    """
+    right_side = np.zeros(shape)
+    right_side[:, 0, :] += 2.*deltas[0]*boundary_values[:, 0, :]
+    right_side[0, :, :] += 2.*deltas[1]*boundary_values[0, :, :]
+    right_side[:, :, 0] += 2.*deltas[2]*boundary_values[:, :, 0]
+    right_side[:, -1, :] += -2.*deltas[0]*boundary_values[:, -1, :]
+    right_side[-1, :, :] += -2.*deltas[1]*boundary_values[-1, :, :]
+    right_side[:, :, -1] += -2.*deltas[2]*boundary_values[:, :, -1]
+
+    right_side[0, 0, 0] /= 3.
+    right_side[-1, 0, 0] /= 3.
+    right_side[0, -1, 0] /= 3.
+    right_side[-1, -1, 0] /= 3.
+    right_side[0, 0, -1] /= 3.
+    right_side[-1, 0, -1] /= 3.
+    right_side[-1, -1, -1] /= 3.
+
+    right_side[1:-1, 0, 0] /= 2.
+    right_side[1:-1, -1, 0] /= 2.
+    right_side[1:-1, 0, -1] /= 2.
+    right_side[1:-1, -1, -1] /= 2.
+
+    right_side[0, 1:-1, 0] /= 2.
+    right_side[-1, 1:-1, 0] /= 2.
+    right_side[0, 1:-1, -1] /= 2.
+    right_side[-1, 1:-1, -1] /= 2.
+
+    right_side[0, 0, 1:-1] /= 2.
+    right_side[-1, 0, 1:-1] /= 2.
+    right_side[0, -1, 1:-1] /= 2.
+    right_side[-1, -1, 1:-1] /= 2.
+
+    return right_side
+
+
+def construct_eigenvalues_fuka(shape, deltas):
+    r"""
+    Construct eigenvalues of the finite difference matrix of
+    the Laplace problem.
+    """
+    x_index = np.arange(0, shape[1])
+    y_index = np.arange(0, shape[0])
+    z_index = np.arange(0, shape[2])
+    index_mesh = np.meshgrid(x_index,
+                             y_index,
+                             z_index)
+    eigenvalues = -((2.*np.sin(np.pi*index_mesh[0] /
+                                         (2.*(shape[1] - 1.))))**2 +
+                    (2.*np.sin(np.pi*index_mesh[1] /
+                                         (2.*(shape[0] - 1.))))**2 +
+                    (2.*np.sin(np.pi*index_mesh[2] /
+                                         (2.*(shape[2] - 1.))))**2)
+    eigenvalues[np.isclose(eigenvalues, 0, atol=1e-12)] = 1e-8
     return eigenvalues
