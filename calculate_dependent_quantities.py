@@ -259,15 +259,7 @@ def main(args):
                               'A_ref_x', 'A_ref_y', 'A_ref_z',
                               'u_i_ref_x', 'u_i_ref_y', 'u_i_ref_z',
                               'w_i_ref_x', 'w_i_ref_y', 'w_i_ref_z',
-                              'w_i_raw_ref_x', 'w_i_raw_ref_y', 'w_i_raw_ref_z',
-                              'B_dynamic_x', 'B_dynamic_y', 'B_dynamic_z',
-                              'B_dynamic_ref_x', 'B_dynamic_ref_y', 'B_dynamic_ref_z',
-                              'A_dynamic_x', 'A_dynamic_y', 'A_dynamic_z',
-                              'A_dynamic_ref_x', 'A_dynamic_ref_y', 'A_dynamic_ref_z',
-                              'phi_b_ref',
-                              'phi_b_dynamic_ref',
-                              'phi_i_ref',
-                              'phi_i_raw_ref']
+                              'w_i_raw_ref_x', 'w_i_raw_ref_y', 'w_i_raw_ref_z']
 
         else:
             fields = ([b_field[0]] + [b_field[1]] + [b_field[2]] +
