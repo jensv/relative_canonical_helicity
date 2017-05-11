@@ -233,15 +233,7 @@ def main(args):
                       list(vector_potential_ref) +
                       list(ion_velocity_ref) +
                       list(ion_vorticity_smooth_ref) +
-                      list(ion_vorticity_ref) +
-                      list(b_field_dynamic) +
-                      list(b_field_dynamic_ref) +
-                      list(vector_potential_dynamic) +
-                      list(vector_potential_dynamic_ref) +
-                      [b_scalar_potential_ref] +
-                      [b_scalar_potential_dynamic_ref] +
-                      [i_scalar_potential_smooth_ref] +
-                      [i_scalar_potential_ref])
+                      list(ion_vorticity_ref))
 
             quantity_names = ['B_x', 'B_y', 'B_z',
                               'j_x', 'j_y', 'j_z',
