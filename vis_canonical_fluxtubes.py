@@ -495,7 +495,7 @@ def setup_scalar_isosurface(visit, quantity,
 
 def setup_current_pseudocolor(visit, current_to_use,
                               colortable="PRGn_Stepped", max_val=1e6,
-                              min_val=-1e6, invert=True):
+                              min_val=-1e6, invert=True, horizontal=True):
     r"""
     Setup pseudocolor current plot.
     """
@@ -525,6 +525,12 @@ def setup_current_pseudocolor(visit, current_to_use,
     colorbar = visit.GetAnnotationObject('Plot0000')
     colorbar.SetDrawMinMax(0)
 
+    if horizontal:
+        colorbar.SetOrientation("HorizontalBottom")
+        colorbar.SetFontHeight(0.017)
+        colorbar.SetNumberFormat('%#3.1g')
+        colorbar.SetManagePosition(0)
+        colorbar.SetPosition((0.05, 0.99))
     return PseudocolorAtts, SliceAtts
 
 
@@ -732,6 +738,30 @@ def set_default_lighting(visit):
     light0.color = (255, 255, 255, 255)
     light0.brightness = 1
     visit.SetLight(0, light0)
+
+
+def set_default_view_thesis(visit):
+    r"""
+    """
+    View3DAtts = visit.View3DAttributes()
+    View3DAtts.viewNormal = (-0.652048, 0.487146, 0.580966)
+    View3DAtts.focus = (0.00151111, 0.0045, 0.331997)
+    View3DAtts.viewUp = (0.365672, 0.873317, -0.321872)
+    View3DAtts.viewAngle = 30
+    View3DAtts.parallelScale = 0.0883679
+    View3DAtts.nearPlane = -0.176736
+    View3DAtts.farPlane = 0.176736
+    View3DAtts.imagePan = (-0.0429026, -0.00832011)
+    View3DAtts.imageZoom = 0.95
+    View3DAtts.perspective = 1
+    View3DAtts.eyeAngle = 2
+    View3DAtts.centerOfRotationSet = 0
+    View3DAtts.centerOfRotation = (0.00151111, 0.0045, 0.331997)
+    View3DAtts.axis3DScaleFlag = 0
+    View3DAtts.axis3DScales = (1, 1, 1)
+    View3DAtts.shear = (0, 0, 1)
+    View3DAtts.windowValid = 0
+    visit.SetView3D(View3DAtts)
 
 
 def set_default_view_lower_angle(visit):
@@ -970,7 +1000,7 @@ def main():
         plot_count += 2
 
     if args.view == 'default':
-        set_default_view(visit)
+        set_default_view_thesis(visit)
     elif args.view == 'default_lower_angle':
         set_default_view_lower_angle(visit)
     elif args.view == 'positive_z':
@@ -1022,11 +1052,13 @@ def main():
     save_atts = set_save_settings(visit)
     ending = '.png'
     visit.SetTimeSliderState(time_points[0])
+    visit.ResizeWindow(1, 960, 1000)
+
     if args.wait_for_manual_settings:
         visit.OpenGUI()
         comment = raw_input()
 
-    visit.ResizeWindow(1, 1920, 1080)
+
     for index, time_point in enumerate(time_points):
         print time_point
         plot_number = 0
