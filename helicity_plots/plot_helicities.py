@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_style('whitegrid')
-sns.set_context('poster')
+sns.set_context('paper')
 
 from mpl_toolkits.axes_grid1 import host_subplot
 import mpl_toolkits.axisartist as axisartist
@@ -24,7 +24,7 @@ def compare_helicities(helicities,
                        filter_width_cross=None, filter_width_kinetic=None,
                        add_cross_magnetic=False, add_three=False,
                        ylim=None, labels_case='default', axes=None,
-                       scale='linear', patch_ends=True, shift_time=0):
+                       scale='linear', patch_ends=True, shift_time=0, legend=True):
 
     assert (scale == 'linear' or scale == 'log' or
             scale == 'symlog'), "scale must be one of linear, log or symlog"
@@ -147,7 +147,7 @@ def compare_helicities(helicities,
                  c='red', ls='-', label=labels['relative_magnetic'])
     axes.set_xlabel(r'$t$ [$\mu s$]')
     axes.set_yscale(scale)
-    axes.set_ylabel(r'$K$ [$J$ $kg$ $m^{-4}}$]')
+    axes.set_ylabel(r'$K$ [$kg^2$ $m^{-2}$ $s^{-2}$]')
     if normalize:
         axes.set_ylabel(r'$K$ [-]')
 
@@ -159,14 +159,15 @@ def compare_helicities(helicities,
     if add_three:
         axes.plot(time, kinetic_final + cross_final + magnetic_final,
                   c='black', ls='-', label=labels['relative_magnetic'] + " $+$ " + labels['relative_cross'] + " $+$ " + labels['relative_kinetic'])
-    axes.legend(loc='best', fancybox=True, frameon=True, framealpha=0.9)
+    if legend:
+        axes.legend(loc='best', fancybox=True, frameon=True, framealpha=0.9)
     if patch_ends:
-        in_dark_box_1 = patches.Rectangle((5.644, -1000),
-                                          11.9-5.644, 2000., alpha=0.4, color='grey')
-        in_light_box_1 = patches.Rectangle((0.748, -1000),
-                                           2.108-0.748, 2000., alpha=0.1, color='grey')
-        in_light_box_2 = patches.Rectangle((2.584, -1000),
-                                           12.104-2.584, 2000, alpha=0.1, color='grey')
+        in_dark_box_1 = patches.Rectangle((4.096, -1000),
+                                          11.948-4.096, 2000., alpha=0.4, color='grey')
+        in_light_box_1 = patches.Rectangle((0.751, -1000),
+                                           2.116-0.751, 2000., alpha=0.1, color='grey')
+        in_light_box_2 = patches.Rectangle((2.594, -1000),
+                                           14.406-2.594, 2000, alpha=0.1, color='grey')
         axes.add_patch(in_dark_box_1)
         axes.add_patch(in_light_box_1)
         axes.add_patch(in_light_box_2)
@@ -182,7 +183,7 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
                                 filter_width_cross=None, filter_width_kinetic=None,
                                 add_cross_magnetic=False, add_three=False,
                                 ylim=None, labels_case='default', axes=None,
-                                scale='linear', patch_ends=True, shift_time=0):
+                                scale='linear', patch_ends=True, shift_time=0, legend=True):
     r"""
     """
     assert (scale == 'linear' or scale == 'log' or
@@ -286,11 +287,11 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
             kinetic_final = helicities_to_plot['relative_kinetic']/(norm*kinetic_divider)
             kinetic_std_final = helicities_std['relative_kinetic']/(norm*kinetic_divider)
             axes.plot(time, helicities_to_plot['relative_kinetic']/(norm*kinetic_divider),
-                      c='blue', ls='-', label=labels['relative_kinetic'])
+                      c='blue', ls='-', label=labels['relative_kinetic'], lw=1)
             axes.fill_between(time,
                               (helicities_to_plot['relative_kinetic'] - helicities_std['relative_kinetic'])/(norm*kinetic_divider),
                               (helicities_to_plot['relative_kinetic'] + helicities_std['relative_kinetic'])/(norm*kinetic_divider),
-                              facecolor='#95d0fc')
+                              facecolor='#95d0fc', alpha=0.5)
 
     if cross:
         axes.plot(time, helicities_to_plot['cross']/(norm*cross_divider),
@@ -298,7 +299,7 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
         axes.fill_between(time,
                           (helicities_to_plot['cross'] - helicities_std['cross'])/(norm*cross_divider),
                           (helicities_to_plot['cross'] + helicities_std['cross'])/(norm*cross_divider),
-                          facecolor='#2dfe54')
+                          facecolor='#2dfe54', alpha=0.5)
     if relative_cross:
         if filter_width_cross:
             box = boxcar(filter_width_cross)/filter_width_cross
@@ -312,11 +313,11 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
             cross_final = helicities_to_plot['relative_cross']/(norm*cross_divider)
             cross_std_final = helicities_std['relative_cross']/(norm*cross_divider)
             axes.plot(time, helicities_to_plot['relative_cross']/(norm*cross_divider),
-                      c='green', ls='-', label=labels['relative_cross'])
+                      c='green', ls='-', label=labels['relative_cross'], lw=1)
             axes.fill_between(time,
                               (helicities_to_plot['relative_cross'] - helicities_std['relative_cross'])/(norm*cross_divider),
                               (helicities_to_plot['relative_cross'] + helicities_std['relative_cross'])/(norm*cross_divider),
-                              facecolor='#2dfe54')
+                              facecolor='#2dfe54', alpha=0.5)
     if magnetic:
         axes.plot(time, helicities_to_plot['magnetic']/(norm*magnetic_divider),
                  c='red', ls='--', label=labels['magnetic'])
@@ -328,14 +329,14 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
         magnetic_final = helicities_to_plot['relative_magnetic']/(norm*magnetic_divider)
         magnetic_std_final = helicities_std['relative_magnetic']/(norm*magnetic_divider)
         axes.plot(time, helicities_to_plot['relative_magnetic']/(norm*magnetic_divider),
-                 c='red', ls='-', label=labels['relative_magnetic'])
+                  c='red', ls='-', label=labels['relative_magnetic'], lw=1)
         axes.fill_between(time,
                           (helicities_to_plot['relative_magnetic'] - helicities_std['relative_magnetic'])/(norm*magnetic_divider),
                           (helicities_to_plot['relative_magnetic'] + helicities_std['relative_magnetic'])/(norm*magnetic_divider),
-                          facecolor='#ff474c')
+                          facecolor='#ff474c', alpha=0.5)
     axes.set_xlabel(r'$t$ [$\mu s$]')
     axes.set_yscale(scale)
-    axes.set_ylabel(r'$K$ [$J$ $kg$ $m^{-4}}$]')
+    axes.set_ylabel(r'$K$ [$kg^2$ $m^{-2}$ $s^{-2}$]')
     if nondim:
         axes.set_ylabel(r'$K$ [-]')
 
@@ -356,15 +357,15 @@ def compare_helicities_mean_std(helicities_mean, helicities_std,
                           (total_helicity + std_propagated),
                           facecolor='black', alpha=0.5)
 
-
-    axes.legend(loc='best', fancybox=True, frameon=True, framealpha=0.9)
+    if legend:
+        axes.legend(loc='best', fancybox=True, frameon=True, framealpha=0.9)
     if patch_ends:
-        in_dark_box_1 = patches.Rectangle((5.644, -1000), 11.9-5.644, 2000.,
-                                          alpha=0.4, color='grey')
-        in_light_box_1 = patches.Rectangle((0.748, -1000), 2.108-0.748, 2000.,
-                                           alpha=0.1, color='grey')
-        in_light_box_2 = patches.Rectangle((2.584, -1000), 12.104-2.584, 2000,
-                                           alpha=0.1, color='grey')
+        in_dark_box_1 = patches.Rectangle((4.096, -1000),
+                                          11.948-4.096, 2000., alpha=0.4, color='grey')
+        in_light_box_1 = patches.Rectangle((0.751, -1000),
+                                           2.116-0.751, 2000., alpha=0.1, color='grey')
+        in_light_box_2 = patches.Rectangle((2.594, -1000),
+                                           14.406-2.594, 2000, alpha=0.1, color='grey')
         axes.add_patch(in_dark_box_1)
         axes.add_patch(in_light_box_1)
         axes.add_patch(in_light_box_2)

@@ -92,7 +92,7 @@ class TaylorDiagram(object):
         ax.axis["top"].toggle(ticklabels=True, label=True)
         ax.axis["top"].major_ticklabels.set_axis_direction("top")
         ax.axis["top"].label.set_axis_direction("top")
-        ax.axis["top"].label.set_text("Normalized average helicity density")
+        ax.axis["top"].label.set_text("Normalized helicity density sum")
 
         ax.axis["left"].set_axis_direction("bottom") # "right X axis
         #ax.axis["left"].label.set_text("Standard deviation")
