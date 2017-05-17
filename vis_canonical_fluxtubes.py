@@ -4,6 +4,11 @@
 Created on Fri Aug 19 14:38:10 2016
 
 @author: Jens von der Linden
+
+Plot frames of canonical flux tube animations.
+Plot options include ion, electron canonical flux tubes,
+temperature and density isosurfaces, current contours
+in an x-y plane.
 """
 
 from datetime import datetime as date
@@ -436,6 +441,7 @@ def launch_points_inner_outer(center, plane=0.249,
 
 def full_circle_thetas(num_points):
     r"""
+    Return a linear space of angles.
     """
     thetas = np.linspace(0, 2.*np.pi, num_points)
     return thetas
@@ -443,6 +449,7 @@ def full_circle_thetas(num_points):
 
 def circle_with_cut_thetas(num_points):
     r"""
+    Return a linear space of angles with a cut from 3/4pi to 5/4pi.
     """
     thetas = np.linspace(0, 3./4.*np.pi, num_points)
     thetas = np.concatenate((thetas, np.linspace(5./4.*np.pi, 2.*np.pi,
@@ -453,6 +460,7 @@ def circle_with_cut_thetas(num_points):
 def launch_points(center, thetas, radius=0.003,
                   plane=0.249):
     r"""
+    Return launch points for field lines.
     """
     x_points = radius * np.cos(thetas) + center[0]
     y_points = radius * np.sin(thetas) + center[1]
@@ -630,6 +638,7 @@ def setup_forward_backward_ion_canonical_flux_tubes(visit, points_foward,
 def setup_backward_and_B_stream(visit, name, launch_points,
                                 B_launch_points, color=green, B_color=red):
     r"""
+    Setup fiedlines for a magnetic flux tube and for a backward integrated quantity.
     """
     visit.AddPlot("Streamline", 'B', 1, 0)
     StreamlineAtts_B = visit.StreamlineAttributes()
@@ -742,6 +751,9 @@ def set_default_lighting(visit):
 
 def set_default_view_thesis(visit):
     r"""
+    Set default view for viewing fluxtubes.
+    If view needs to be modified it is best to align visit with gui and save
+    parameters from visit.GetView3D().
     """
     View3DAtts = visit.View3DAttributes()
     View3DAtts.viewNormal = (-0.652048, 0.487146, 0.580966)
@@ -819,6 +831,9 @@ def set_positive_x_view(visit):
 
 def set_postive_z_view(visit):
     r"""
+    Set view along positive z for viewing fluxtubes.
+    If view needs to be modified it is best to align visit with gui and save
+    parameters from visit.GetView3D().
     """
     view = visit.GetView3D()
     view.SetViewNormal((0.00944856, 0.0379894, 0.999233))
@@ -915,6 +930,7 @@ def setup_slider(visit):
 
 def main():
     r"""
+    Plot frames of canonical flux tube animations.
     """
     args = parse_args()
     database_prefix = args.database_prefix + args.database_date
