@@ -4,6 +4,10 @@
 Created on Mon Aug  1 18:07:14 2016
 
 @author: Jens von der Linden
+
+Calculate gauge dependent and relative helicities.
+Read field quantities from rectilinear vtk files.
+Write out helicity to ASCII files.
 """
 import argparse
 import numpy as np
@@ -22,6 +26,7 @@ import write_to_vtk.helicities as hel
 
 def main(args):
     r"""
+    Calculate gauge dependent and relative helcities.
     """
     just_magnetic = args.just_magnetic
     now = datetime.now().strftime("%Y-%m-%d-%H-%M")

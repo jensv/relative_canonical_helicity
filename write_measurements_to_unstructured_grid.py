@@ -4,6 +4,17 @@
 Created on Feb 14 2017
 
 @author: Jens von der Linden
+
+Read processed measurements
+and write to unstructured vtk files files.
+The processed measurements are magnetic field, density, temperature
+and Mach number.
+Mach number is calculated directly from the raw MDSplus Mach probe
+voltages, all other data is read from IDL output files from the RSX data anlysis
+scripts.
+Only measurement points slightly larger than the
+intended interpolation spaces are kept and Delaunay triangulated
+to define the unstructured grid.
 """
 import argparse
 import numpy as np
@@ -19,6 +30,7 @@ from write_to_vtk import unstructured_grid as ug
 
 def main(args):
     r"""
+    Read processed measurements and write to unstructured vtk files.
     """
     now = datetime.now().strftime("%Y-%m-%d-%H-%M")
     out_dir = '../output/boxed_unstructured_measurements/' + now
@@ -73,6 +85,7 @@ def main(args):
 
 def parse_args():
     r"""
+    Read Arguments.
     """
     parser = argparse.ArgumentParser(description='Create unstructured VTK from measurements')
     parser.add_argument('--bx_extent',

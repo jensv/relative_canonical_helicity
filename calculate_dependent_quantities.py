@@ -4,6 +4,26 @@
 Created on Mon Aug  1 18:07:14 2016
 
 @author: Jens von der Linden
+
+Calculate the dependent fields from interpolated
+measurements.
+Optionally filter the fields with Gaussian kernels of given
+standard deviation for sensitivity / uncertainty analysis.
+
+The dependent fields are:
+ion_vorticity,
+ion_vorticity_smooth,
+current,
+current_smooth,
+density_plane_normalized,
+temperature_plane_normalized,
+vector_potential,
+b_field_ref,
+vector_potential_ref,
+ion_vorticity_ref,
+ion_vorticity_smooth_ref,
+ion_velocity_ref,
+ion_velocity_smooth_ref
 """
 import argparse
 import numpy as np
@@ -28,6 +48,8 @@ from vector_calculus import vector_calculus as vc
 
 def main(args):
     r"""
+    Calculate the dependent fields from interpolated
+    measurements.
     """
     just_magnetic = args.just_magnetic
     interpolate_nan = args.interpolate_nan
@@ -306,6 +328,7 @@ def filter_data(data, filter_sigma=None,
 
 def parse_args():
     r"""
+    Read arguments.
     """
     parser = argparse.ArgumentParser(description=("Create VTK files"
                                                   "of canonical quantities"))
@@ -385,6 +408,12 @@ def remove_edges_vector(quantity,
                         y_start=0, y_end=-2,
                         z_start=0, z_end=-1):
     r"""
+    Returns vector field with edges removed.
+
+    Notes
+    -----
+    Usually used to remove nans from interpolation, if parts of the grid were outside
+    of the convex hull of the measurement points.
     """
     for index in xrange(len(quantity)):
         quantity[index] = quantity[index][y_start:y_end, x_start:x_end, z_start:z_end]
@@ -396,6 +425,12 @@ def remove_edges_scalar(quantity,
                         y_start=0, y_end=-2,
                         z_start=0, z_end=-1):
     r"""
+    Returns vector field with edges removed.
+
+    Notes
+    -----
+    Usually used to remove nans from interpolation, if parts of the grid were outside
+    of the convex hull of the measurement points
     """
     quantity = quantity[y_start:y_end, x_start:x_end, z_start:z_end]
     return quantity
@@ -403,6 +438,7 @@ def remove_edges_scalar(quantity,
 
 def boxcar_filter(quantity, width, interpolate_nan=False):
     r"""
+    Filter scalar field with boxcar of given width.
     """
     quantity = np.array(quantity)
     nan_indexes = np.where(np.isnan(quantity))
@@ -421,6 +457,11 @@ def boxcar_filter(quantity, width, interpolate_nan=False):
 
 def grad_ion_velocity(mach, grad_mach, te, grad_te):
     r"""
+    Return grad of ion velocity.
+
+    Notes
+    -----
+    The grad of ion velocity depends on the grad of mach number and temperature.
     """
     factor = q_e/m_i
     term1 = np.sqrt(te*factor)*(grad_mach)

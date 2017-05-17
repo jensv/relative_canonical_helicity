@@ -4,6 +4,10 @@
 Created on Mon Aug  1 18:07:14 2016
 
 @author: Jens von der Linden
+
+Interpolate unstructured fields to rectilinear grid.
+Read unstructured fields from unstructured vtk file.
+Write interpolated fields to rectilinear vtk file.
 """
 import argparse
 import numpy as np
@@ -17,6 +21,7 @@ from write_to_vtk import structured_3d_vtk as struc_3d
 
 def main(args):
     r"""
+    Interpolate unstructured fields to rectilinear grid.
     """
     just_magnetic = args.just_magnetic
     now = datetime.now().strftime("%Y-%m-%d-%H-%M")
@@ -162,6 +167,7 @@ def main(args):
 
 def parse_args():
     r"""
+    Read arguments.
     """
     parser = argparse.ArgumentParser(description=("Create VTK files of"
                                                   "interpolated measurements"))

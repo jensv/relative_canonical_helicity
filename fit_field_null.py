@@ -2,6 +2,11 @@ r"""
 Fits field line null.
 
 Created March 28 2017 by Jens von der Linden.
+
+Fit field nulls of the Bx and By magnetic field with
+iterative circle fitting to the field lines.
+
+Reads unstructured vtk files and generates Bx and By interpolators.
 """
 
 import argparse
@@ -21,6 +26,8 @@ from write_to_vtk import structured_3d_vtk as struc_3d
 
 def main(args):
     r"""
+    Fit field nulls of the Bx and By magnetic field with
+    iterative circle fitting to the field lines.
     """
     now = datetime.now().strftime("%Y-%m-%d-%H-%M")
     out_dir = '../output/' + args.output_prefix + '/' + now + '/'
@@ -202,6 +209,7 @@ def integrate_flux(centroid, radius, bz_interpolator, limits, bias_field=0.02):
 
 def parse_args():
     r"""
+    Read arguments.
     """
     parser = argparse.ArgumentParser(description=("Create VTK files of"
                                                   "interpolated measurements"))
