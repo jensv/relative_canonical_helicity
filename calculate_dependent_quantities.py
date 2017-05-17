@@ -326,7 +326,7 @@ def parse_args():
                                "each side to remove NaNs e.g."
                                "xlow xhigh ylow yhigh zlow zhigh"),
                         nargs=6, type=int,
-                        default=[2, None, 3, -3, 0, -1])
+                        default=[2, -1, 3, -3, 0, -1])
     parser.add_argument('--filter_width',
                         help='width of boxcar filter for derivatives',
                         type=float, default=5)
