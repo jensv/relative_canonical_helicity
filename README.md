@@ -1,13 +1,18 @@
 # README #
-This code reconstruct canonical flux tubes and calculates their helicity from experimental measurements of
+These scripts reconstruct canonical flux tubes and calculate their helicity from experimental measurements of
 magnetic field, density, electron temperature and Mach numbers of a plasma.
+I used these scripts to analyse data from the Reconnection Scaling Experiment (RSX) for my PhD dissertation.
 
 Canonical flux tubes trace out cross-sections of constant flux of circulation of a species’ canonical momentum.
 In the zero-flow limit, canonical flux tubes are magnetic flux tubes, but in full form, 
 present the distinct advantage of reconciling all plasma regimes (single particle, kinetic, two-fluid, and MHD) 
 with topological concepts of helicity, twists and linkages.
-compact toroid merging experiments and hypothesizes a mechanism for converting destabilizing magnetic twist into 
-stabilizing helical shear flows in astrophysical jets.
+The theory of canonical helicity transport predicts the threshold for the observed bifurcation of end states in 
+compact toroid merging experiments and hypothesizes a mechanism for converting destabilizing magnetic twist 
+into stabilizing helical shear flows in astrophysical jets.
+
+
+### Canonical flux tubes and their helicity in RSX  ###
 Ion and electron canonical flux tubes are visualized from a volumetric dataset of Mach, triple, and $\dot{B}$ probe 
 measurements at over $10,000$ spatial locations of a gyrating kinked plasma column in a sub-volume of the RSX 
 experiment. The flux tubes gyrate into and out of the sub-volume.
