@@ -31,8 +31,9 @@ The magnetic and cross helicity are anti-correlated.
 * seaborn 0.7.1
 * sqlite 3.13
 * vtk 6.3.0
-* MDSplus and mdsplus python module 
-* VisIT and visit python module
+* MDSplus 7.7.1 and mdsplus python module (alpha7.0.144)
+* VisIt 2.10.3 and corresponding visit python module
+
 
 The dependencies can be installed with the anaconda python distribution.
 The MDSplus can be found at http://www.mdsplus.org/index.php/Introduction.
@@ -63,9 +64,9 @@ and writes them to unstructured vtk files files.
 `calculate_dependent_quantities.py` calculates the dependent quantities needed to plot flux tubes and 
 calculate helicity from interpolated measurements.
 
-`calculate_helicity.py` Calculates gauge-dependent and relative helicities.
+`calculate_helicity.py` calculates gauge-dependent and relative helicities.
 
-`vis_canonical_flux_tubes.py` Plot frames of canonical flux tube animations.
+`vis_canonical_flux_tubes.py` plots frames of canonical flux tube animations.
 Plot options include ion, electron canonical flux tubes, temperature and density isosurfaces, current contours
 in an x-y plane.
 
